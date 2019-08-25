@@ -1,0 +1,64 @@
+   Compiling dice_backend v0.1.0 (/home/valarauca/Documents/rust/dice_backend)
+error[E0412]: cannot find type `BinaryOperation` in this scope
+error[E0412]: cannot find type `BinaryOperation` in this scope
+  --> src/lib.rs:19:36
+   |
+19 |     Operation(Box<Expression<'a>>, BinaryOperation, Box<Expression<'a>>),
+   |                                    ^^^^^^^^^^^^^^^ not found in this scope
+  --> src/lib.rs:19:36
+   |
+19 |     Operation(Box<Expression<'a>>, BinaryOperation, Box<Expression<'a>>),
+   |                                    ^^^^^^^^^^^^^^^ not found in this scope
+
+
+error[E0271]: type mismatch resolving `<std::vec::Vec<(Expression<'_>, &str)> as std::iter::IntoIterator>::Item == Expression<'a>`
+  --> src/lib.rs:33:75
+   |
+33 |             args: args.into_iter().map(|tup| -> Expression<'a> { tup.0 }).chain(args).collect::<Vec<Expression<'a>>>().into_boxed_slice()
+   |                                                                           ^^^^^ expected tuple, found enum `Expression`
+   |
+   = note: expected type `(Expression<'_>, &str)`
+              found type `Expression<'a>`
+
+error[E0271]: type mismatch resolving `<std::vec::Vec<(Expression<'_>, &str)> as std::iter::IntoIterator>::Item == Expression<'a>`
+  --> src/lib.rs:33:75
+   |
+33 |             args: args.into_iter().map(|tup| -> Expression<'a> { tup.0 }).chain(args).collect::<Vec<Expression<'a>>>().into_boxed_slice()
+   |                                                                           ^^^^^ expected tuple, found enum `Expression`
+   |
+   = note: expected type `(Expression<'_>, &str)`
+              found type `Expression<'a>`
+
+error[E0599]: no method named `collect` found for type `std::iter::Chain<std::iter::Map<std::vec::IntoIter<(Expression<'_>, &str)>, [closure@src/lib.rs:33:40: 33:73]>, std::vec::IntoIter<(Expression<'_>, &str)>>` in the current scope
+  --> src/lib.rs:33:87
+   |
+33 |             args: args.into_iter().map(|tup| -> Expression<'a> { tup.0 }).chain(args).collect::<Vec<Expression<'a>>>().into_boxed_slice()
+   |                                                                                       ^^^^^^^
+   |
+   = note: the method `collect` exists but the following trait bounds were not satisfied:
+           `&mut std::iter::Chain<std::iter::Map<std::vec::IntoIter<(Expression<'_>, &str)>, [closure@src/lib.rs:33:40: 33:73]>, std::vec::IntoIter<(Expression<'_>, &str)>> : std::iter::Iterator`
+           `std::iter::Chain<std::iter::Map<std::vec::IntoIter<(Expression<'_>, &str)>, [closure@src/lib.rs:33:40: 33:73]>, std::vec::IntoIter<(Expression<'_>, &str)>> : std::iter::Iterator`
+
+error[E0599]: no method named `collect` found for type `std::iter::Chain<std::iter::Map<std::vec::IntoIter<(Expression<'_>, &str)>, [closure@src/lib.rs:33:40: 33:73]>, std::vec::IntoIter<(Expression<'_>, &str)>>` in the current scope
+  --> src/lib.rs:33:87
+   |
+33 |             args: args.into_iter().map(|tup| -> Expression<'a> { tup.0 }).chain(args).collect::<Vec<Expression<'a>>>().into_boxed_slice()
+   |                                                                                       ^^^^^^^
+   |
+   = note: the method `collect` exists but the following trait bounds were not satisfied:
+           `&mut std::iter::Chain<std::iter::Map<std::vec::IntoIter<(Expression<'_>, &str)>, [closure@src/lib.rs:33:40: 33:73]>, std::vec::IntoIter<(Expression<'_>, &str)>> : std::iter::Iterator`
+           `std::iter::Chain<std::iter::Map<std::vec::IntoIter<(Expression<'_>, &str)>, [closure@src/lib.rs:33:40: 33:73]>, std::vec::IntoIter<(Expression<'_>, &str)>> : std::iter::Iterator`
+
+error: aborting due to 3 previous errors
+
+Some errors have detailed explanations: E0271, E0412, E0599.
+For more information about an error, try `rustc --explain E0271`.
+error: Could not compile `dice_backend`.
+warning: build failed, waiting for other jobs to finish...
+error: aborting due to 3 previous errors
+
+Some errors have detailed explanations: E0271, E0412, E0599.
+For more information about an error, try `rustc --explain E0271`.
+error: Could not compile `dice_backend`.
+
+To learn more, run the command again with --verbose.

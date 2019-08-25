@@ -1,0 +1,46 @@
+use super::parser_output::{Literal,Expression,Operation,TypeData,Structures,Statement,Statements};
+
+grammar;
+
+pub Stmt: Statement<'input> = {
+  "let" <name: Lit> ":" <kind: Kind> "=" <expr: Expr> => Statement::new_var(name, kind, expr),
+   "return" <expr: Expr> => Statement::new_ret(expr),
+};
+
+pub Stmts: Statements<'input> = {
+   <multiple: ( Stmt ";" )*> => Statements::new(multiple),
+}
+
+pub Struct: Structures<'input> = {
+   "const" <name: Lit> ":" <kind: Kind> "=" <expr: Expr> => Structures::new_const(name, kind, expr),
+   "fn" <name: Lit> "(" <arg: ( Lit ":" Kind "," )*> <lastArg: (Lit ":" Kind)? > ")" "->" <return_type: Kind> "{" <body:Stmts> "}" => Structures::new_func(name, arg, lastArg, return_type, body),
+};
+
+pub Kind: TypeData = {
+    "bool" => TypeData::Bool,
+    "int" => TypeData::Int,
+    "vec<bool>" => TypeData::CollectionOfBool,
+    "vec<int>" => TypeData::CollectionOfInt,
+};
+
+pub Lit: Literal<'input> = {
+    <cap:r"[a-zA-Z][A-Za-z0-9_]"> => Literal::Str(cap),
+    <int:r"[0-9]+"> => Literal::Number(i64::from_str_radix(int,10).unwrap()),
+    "true" => Literal::Boolean(true),
+    "false" => Literal::Boolean(false),
+};
+
+pub Expr: Expression<'input> = {
+    "(" <left: Expr> <op: Op> <right: Expr> ")" => Expression::new_operation(left,op,right),
+    <lit:Lit> => Expression::new_literal(lit),
+    <func_name:Lit> "(" <args:(Expr ",")*> <arg:Expr?> ")" => Expression::new_function(func_name,args, arg),
+};
+
+pub Op: Operation = {
+    "+" => Operation::Add,
+    "-" => Operation::Sub,
+    "*" => Operation::Mul,
+    "/" => Operation::Div,
+    "|" => Operation::Or,
+    "&" => Operation::And,
+};
