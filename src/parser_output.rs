@@ -1,9 +1,75 @@
+use std::fmt;
+
+use lalrpop_util::ParseError;
+use super::value::{TreeParser};
+
+/// AbstractSyntaxTree is the top level of parse. 
+///
+/// Additional passes are made before a "parse" is
+/// complete to ensure that literals are well formed.
+pub struct AbstractSyntaxTree<'a> {
+    pub ast: Box<[Structures<'a>]>,
+}
+impl<'a> AbstractSyntaxTree<'a> {
+    pub fn new(args: Vec<(Structures<'a>,&'a str)>) -> AbstractSyntaxTree<'a> {
+        let ast: Vec<Structures<'a>> = args.into_iter().map(|tup| tup.0).collect();
+        let ast = ast.into_boxed_slice();
+        AbstractSyntaxTree{ ast }
+    }
+
+    /// Parse will attempt to construct an abstract syntax tree from the input
+    pub fn parse<'b>(input: &'b str) -> Result<AbstractSyntaxTree<'b>,String> {
+        #[inline(always)]
+        fn ahead(input: &str, pos: usize) -> Option<usize> {
+            input.char_indices().filter(|(i,c)| *c == '\n' && *i <= pos).map(|(i,_)| i).next()
+        }
+        #[inline(always)]
+        fn behind(input: &str, pos: usize) -> Option<usize> {
+            input.char_indices().filter(|(i,c)| *c == '\n' && *i >= pos).map(|(i,_)| i).next()
+        }
+        #[inline(always)]
+        fn snippet<'c>(input: &'c str, pos_start: usize, pos_end: usize) -> &'c str {
+            let start = ahead(input, pos_start).into_iter().flat_map(|pos| ahead(input, pos)).next().unwrap_or(0usize);
+            let end = behind(input, pos_end).into_iter().flat_map(|pos| behind(input, pos)).next().unwrap_or(input.len());
+            unsafe{ ::std::str::from_utf8_unchecked(&input.as_bytes()[start..end]) }
+        }
+        match TreeParser::new().parse(input) {
+            Ok(tree) => Ok(tree),
+            Err(ParseError::InvalidToken{ location }) => {
+                Err(format!("Unable to parse:\n{}\n", snippet(input, location, location)))
+            },
+            Err(ParseError::UnrecognizedEOF{ location: _, expected: _}) => {
+                Err(format!("File terminated before it should"))
+            },
+            Err(ParseError::UnrecognizedToken{token: (a,_,b), expected }) => {
+                Err(format!("Unable to parse:\n{}\n", snippet(input, a, b)))
+            },
+            Err(_) => {
+                unreachable!()
+            }
+        }
+    }
+}
+
 /// Literal values.
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub enum Literal<'a> {
     Number(i64),
     Boolean(bool),
     Str(&'a str),
+}
+impl<'a> fmt::Display for Literal<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Literal::Number(ref num) => write!(f, "{}", *num),
+            Literal::Boolean(ref var) => if *var {
+                write!(f, "true")
+            } else {
+                write!(f, "false")
+            },
+            Literal::Str(ref s) => write!(f, "{}", s),
+        }
+    }
 }
 
 #[derive(Copy,Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
@@ -12,6 +78,16 @@ pub enum TypeData {
     Int,
     CollectionOfBool,
     CollectionOfInt,
+}
+impl fmt::Display for TypeData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeData::Bool => write!(f, "bool"), 
+            TypeData::Int => write!(f, "int"),
+            TypeData::CollectionOfBool => write!(f, "vec<bool>"),
+            TypeData::CollectionOfInt => write!(f, "vec<int>"),
+        }
+    }
 }
 
 /// Operations are things we do to numbers
@@ -24,11 +100,31 @@ pub enum Operation {
     Or,
     And,
 }
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operation::Add => write!(f, "+"), 
+            Operation::Sub => write!(f, "-"), 
+            Operation::Mul => write!(f, "*"), 
+            Operation::Div => write!(f, "/"), 
+            Operation::Or => write!(f, "|"), 
+            Operation::And => write!(f, "&"), 
+        }
+    }
+}
 
 /// Statements are a collection of operations
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct Statements<'a> {
     data: Box<[Statement<'a>]>,
+}
+impl<'a> fmt::Display for Statements<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for statement in self.data.iter() {
+            write!(f, "{}", statement)?;
+        }
+        Ok(())
+    }
 }
 impl<'a> Statements<'a> {
     #[inline(always)]
@@ -46,6 +142,14 @@ impl<'a> Statements<'a> {
 pub enum Statement<'a> {
     Variable(VariableDeclaration<'a>),
     Return(TerminalExpression<'a>),
+}
+impl<'a> fmt::Display for Statement<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Statement::Variable(ref var) => write!(f,"    let {}: {} = {};\n", var.name, var.kind, var.expr),
+            Statement::Return(ref ret) => write!(f,"    return {};\n", ret.expr),
+        }
+    }
 }
 impl<'a> Statement<'a> {
 
@@ -82,6 +186,27 @@ pub struct VariableDeclaration<'a> {
 pub enum Structures<'a> {
     Constant(ConstantDeclaration<'a>),
     Func(FunctionDeclaration<'a>),
+    Analyze(AnalysisDeclaration<'a>),
+}
+impl<'a> fmt::Display for Structures<'a> {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+       match self {
+           Structures::Analyze(ref ana) => write!(f, "analyze {};\n", ana.expr),
+           Structures::Constant(ref con) => write!(f,"const {}: {} = {};\n", con.name, con.kind, con.expr),
+           Structures::Func(ref func) => {
+               write!(f, "fn {}( ", func.name)?;
+               let last_arg_index = func.args.len()-1;
+               for (arg_index, arg) in func.args.iter().enumerate() {
+                   if arg_index == last_arg_index {
+                       write!(f,"{}: {}", arg.0, arg.1)?;
+                   } else {
+                       write!(f,"{}: {}, ", arg.0, arg.1)?;
+                   }
+               }
+               write!(f," ) -> {} {{\n {} }}\n", func.ret, func.body)
+            }
+       }
+   }
 }
 impl<'a> Structures<'a> {
 
@@ -89,6 +214,13 @@ impl<'a> Structures<'a> {
     pub fn new_const(name: Literal<'a>, kind:TypeData, expr: Expression<'a>) -> Structures<'a> {
         Structures::Constant(ConstantDeclaration {
             name, kind, expr,
+        })
+    }
+
+    #[inline(always)]
+    pub fn new_analysis(expr: Expression<'a>) -> Structures<'a> {
+        Structures::Analyze(AnalysisDeclaration {
+            expr,
         })
     }
 
@@ -124,6 +256,12 @@ pub struct FunctionDeclaration<'a> {
     pub body: Statements<'a>
 }
 
+/// AnalysisDeclaraction is one of the last top level structures.
+#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+pub struct AnalysisDeclaration<'a> {
+    pub expr: Expression<'a>
+}
+
 /// ConstantDeclaration is when a constant is declared globally.
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct ConstantDeclaration<'a> {
@@ -138,6 +276,30 @@ pub enum Expression<'a> {
     Func(FunctionInvocation<'a>),
     Literal(LiteralValue<'a>),
     Operation(OperationResult<'a>),
+}
+impl<'a> fmt::Display for Expression<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expression::Func(ref func) => {
+                write!(f,"{}( ", func.name)?;
+                let last_arg = func.args.len()-1;
+                for (pos,arg) in func.args.iter().enumerate() {
+                    if last_arg == pos {
+                        write!(f, "{}", arg)?;
+                    } else {
+                        write!(f,"{}, ", arg)?;
+                    }
+                }
+                write!(f, " )")
+            },
+            Expression::Literal(ref lit) => {
+                write!(f, "{}", lit.lit)
+            },
+            Expression::Operation(ref op) => {
+                write!(f, "( {} {} {} )", op.left, op.op, op.right)
+            },
+        }
+    }
 }
 impl<'a> Expression<'a> {
     #[inline(always)]
