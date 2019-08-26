@@ -6,7 +6,7 @@ pub Tree: AbstractSyntaxTree<'input> = {
 };
 
 pub Stmt: Statement<'input> = {
-  "let" <name: Lit> ":" <kind: Kind> "=" <expr: Expr> => Statement::new_var(name, kind, expr),
+  "let" <name: Name> ":" <kind: Kind> "=" <expr: Expr> => Statement::new_var(name, kind, expr),
    "return" <expr: Expr> => Statement::new_ret(expr),
 };
 
@@ -16,8 +16,8 @@ pub Stmts: Statements<'input> = {
 
 pub Struct: Structures<'input> = {
    "analyze" <expr: Expr> ";" => Structures::new_analysis(expr),
-   "const" <name: Lit> ":" <kind: Kind> "=" <expr: Expr> => Structures::new_const(name, kind, expr),
-   "fn" <name: Lit> "(" <arg: ( Lit ":" Kind "," )*> <lastArg: (Lit ":" Kind)? > ")" "->" <return_type: Kind> "{" <body:Stmts> "}" => Structures::new_func(name, arg, lastArg, return_type, body),
+   "const" <name: Name> ":" <kind: Kind> "=" <expr: Expr> => Structures::new_const(name, kind, expr),
+   "fn" <name: Name> "(" <arg: ( Name ":" Kind "," )*> <lastArg: (Name ":" Kind)? > ")" "->" <return_type: Kind> "{" <body:Stmts> "}" => Structures::new_func(name, arg, lastArg, return_type, body),
 };
 
 pub Kind: TypeData = {
@@ -27,9 +27,14 @@ pub Kind: TypeData = {
     "vec<int>" => TypeData::CollectionOfInt,
 };
 
+pub Name: &'input str = {
+    <cap:r"[a-zA-Z][A-Za-z0-9_]"> => cap,
+}
+
 pub Lit: Literal<'input> = {
-    <cap:r"[a-zA-Z][A-Za-z0-9_]"> => Literal::Str(cap),
     <int:r"[0-9]+"> => Literal::Number(i64::from_str_radix(int,10).unwrap()),
+    "%d{{" <name: Name> "}}" => Literal::EnvirNumber(name),
+    "%b{{" <name: Name> "}}" => Literal::EnvirBool(name),
     "true" => Literal::Boolean(true),
     "false" => Literal::Boolean(false),
 };
@@ -37,7 +42,7 @@ pub Lit: Literal<'input> = {
 pub Expr: Expression<'input> = {
     "(" <left: Expr> <op: Op> <right: Expr> ")" => Expression::new_operation(left,op,right),
     <lit:Lit> => Expression::new_literal(lit),
-    <func_name:Lit> "(" <args:(Expr ",")*> <arg:Expr?> ")" => Expression::new_function(func_name,args, arg),
+    <func_name:Name> "(" <args:(Expr ",")*> <arg:Expr?> ")" => Expression::new_function(func_name,args, arg),
 };
 
 pub Op: Operation = {

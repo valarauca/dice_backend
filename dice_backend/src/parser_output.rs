@@ -10,6 +10,14 @@ use super::value::{TreeParser};
 pub struct AbstractSyntaxTree<'a> {
     pub ast: Box<[Structures<'a>]>,
 }
+impl<'a> fmt::Display for AbstractSyntaxTree<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for statement in self.ast.iter() {
+            write!(f, "{}", statement)?;
+        }
+        Ok(())
+    }
+}
 impl<'a> AbstractSyntaxTree<'a> {
     pub fn new(args: Vec<(Structures<'a>,&'a str)>) -> AbstractSyntaxTree<'a> {
         let ast: Vec<Structures<'a>> = args.into_iter().map(|tup| tup.0).collect();
@@ -56,7 +64,8 @@ impl<'a> AbstractSyntaxTree<'a> {
 pub enum Literal<'a> {
     Number(i64),
     Boolean(bool),
-    Str(&'a str),
+    EnvirBool(&'a str),
+    EnvirNumber(&'a str),
 }
 impl<'a> fmt::Display for Literal<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -67,7 +76,8 @@ impl<'a> fmt::Display for Literal<'a> {
             } else {
                 write!(f, "false")
             },
-            Literal::Str(ref s) => write!(f, "{}", s),
+            Literal::EnvirBool(ref name) => write!(f, "%b{{{{{}}}}}", name),
+            Literal::EnvirNumber(ref name) => write!(f, "%d{{{{{}}}}}", name),
         }
     }
 }
@@ -154,7 +164,7 @@ impl<'a> fmt::Display for Statement<'a> {
 impl<'a> Statement<'a> {
 
     #[inline(always)]
-    pub fn new_var(name: Literal<'a>, kind: TypeData, expr: Expression<'a>) -> Statement<'a> {
+    pub fn new_var(name: &'a str, kind: TypeData, expr: Expression<'a>) -> Statement<'a> {
         Statement::Variable(VariableDeclaration{
             name, kind, expr,
         })
@@ -175,7 +185,7 @@ pub struct TerminalExpression<'a> {
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct VariableDeclaration<'a> {
-    pub name: Literal<'a>,
+    pub name: &'a str,
     pub kind: TypeData,
     pub expr: Expression<'a>
 }
@@ -211,7 +221,7 @@ impl<'a> fmt::Display for Structures<'a> {
 impl<'a> Structures<'a> {
 
     #[inline(always)]
-    pub fn new_const(name: Literal<'a>, kind:TypeData, expr: Expression<'a>) -> Structures<'a> {
+    pub fn new_const(name: &'a str, kind:TypeData, expr: Expression<'a>) -> Structures<'a> {
         Structures::Constant(ConstantDeclaration {
             name, kind, expr,
         })
@@ -225,18 +235,18 @@ impl<'a> Structures<'a> {
     }
 
     #[inline(always)]
-    pub fn new_func(name: Literal<'a>, args: Vec<(Literal<'a>,&'a str,TypeData,&'a str)>, last_arg: Option<(Literal<'a>, &'a str, TypeData)>, ret: TypeData, body: Statements<'a>) -> Structures<'a> {
+    pub fn new_func(name: &'a str, args: Vec<(&'a str,&'a str,TypeData,&'a str)>, last_arg: Option<(&'a str, &'a str, TypeData)>, ret: TypeData, body: Statements<'a>) -> Structures<'a> {
 
         #[inline(always)]
-        fn args_mapper<'a>(tup: (Literal<'a>, &'a str, TypeData, &'a str)) -> (Literal<'a>,TypeData) {
+        fn args_mapper<'a>(tup: (&'a str, &'a str, TypeData, &'a str)) -> (&'a str,TypeData) {
             (tup.0,tup.2)
         }
         #[inline(always)]
-        fn last_arg_mapper<'a>(tup: (Literal<'a>, &'a str, TypeData)) -> (Literal<'a>,TypeData) {
+        fn last_arg_mapper<'a>(tup: (&'a str, &'a str, TypeData)) -> (&'a str,TypeData) {
             (tup.0,tup.2)
         }
 
-        let args: Vec<(Literal<'a>,TypeData)> = args.into_iter()
+        let args: Vec<(&'a str,TypeData)> = args.into_iter()
             .map(args_mapper)
             .chain(last_arg.into_iter().map(last_arg_mapper))
             .collect();
@@ -250,8 +260,8 @@ impl<'a> Structures<'a> {
 /// ConstantDeclaration is when a constant is declared globally.
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct FunctionDeclaration<'a> {
-    pub name: Literal<'a>,
-    pub args: Box<[(Literal<'a>,TypeData)]>,
+    pub name: &'a str,
+    pub args: Box<[(&'a str,TypeData)]>,
     pub ret: TypeData,
     pub body: Statements<'a>
 }
@@ -265,7 +275,7 @@ pub struct AnalysisDeclaration<'a> {
 /// ConstantDeclaration is when a constant is declared globally.
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct ConstantDeclaration<'a> {
-   pub name: Literal<'a>,
+   pub name: &'a str,
    pub kind: TypeData,
    pub expr: Expression<'a>,
 }
@@ -308,10 +318,10 @@ impl<'a> Expression<'a> {
     }
 
     #[inline(always)]
-    pub fn new_function(name: Literal<'a>, args: Vec<(Expression<'a>, &'a str)>, arg: Option<Expression<'a>>) -> Self {
+    pub fn new_function(name: &'a str, args: Vec<(Expression<'a>, &'a str)>, arg: Option<Expression<'a>>) -> Self {
         #[inline(always)] fn tuple_mapper<'a>(arg: (Expression<'a>,&'a str)) -> Expression<'a> { arg.0 }
         Expression::Func(FunctionInvocation{
-            name: name,
+            name,
             args: args.into_iter().map(tuple_mapper).chain(arg).collect(),
         })
     }
@@ -329,7 +339,7 @@ impl<'a> Expression<'a> {
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct FunctionInvocation<'a> {
-    pub name: Literal<'a>,
+    pub name: &'a str,
     pub args: Box<[Expression<'a>]>,
 }
 
