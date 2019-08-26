@@ -119,6 +119,11 @@ pub enum Operation {
     Div,
     Or,
     And,
+    Equal,
+    GreaterThan,
+    LessThan,
+    GreaterThanEqual,
+    LessThanEqual,
 }
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -129,6 +134,11 @@ impl fmt::Display for Operation {
             Operation::Div => write!(f, "/"), 
             Operation::Or => write!(f, "|"), 
             Operation::And => write!(f, "&"), 
+            Operation::Equal => write!(f,"=="),
+            Operation::GreaterThan => write!(f,">"),
+            Operation::LessThan => write!(f,"<"),
+            Operation::GreaterThanEqual => write!(f, ">="),
+            Operation::LessThanEqual => write!(f,"<="),
         }
     }
 }

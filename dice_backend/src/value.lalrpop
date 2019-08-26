@@ -53,4 +53,11 @@ pub Op: Operation = {
     "/" => Operation::Div,
     "|" => Operation::Or,
     "&" => Operation::And,
+    "==" => Operation::Equal,
+    ">" => Operation::GreaterThan,
+    "<" => Operation::LessThan,
+    ">=" => Operation::GreaterThanEqual,
+    "=>" => Operation::GreaterThanEqual,
+    "<=" => Operation::LessThanEqual,
+    "=<" => Operation::LessThanEqual,
 };
