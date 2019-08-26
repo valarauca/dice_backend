@@ -2,6 +2,7 @@ use std::fmt;
 
 use lalrpop_util::ParseError;
 use super::value::{TreeParser};
+use super::syntaxhelper::{CharacterLookup};
 
 /// AbstractSyntaxTree is the top level of parse. 
 ///
@@ -26,30 +27,17 @@ impl<'a> AbstractSyntaxTree<'a> {
 
     /// Parse will attempt to construct an abstract syntax tree from the input
     pub fn parse<'b>(input: &'b str) -> Result<AbstractSyntaxTree<'b>,String> {
-        #[inline(always)]
-        fn ahead(input: &str, pos: usize) -> Option<usize> {
-            input.char_indices().filter(|(i,c)| *c == '\n' && *i <= pos).map(|(i,_)| i).next()
-        }
-        #[inline(always)]
-        fn behind(input: &str, pos: usize) -> Option<usize> {
-            input.char_indices().filter(|(i,c)| *c == '\n' && *i >= pos).map(|(i,_)| i).next()
-        }
-        #[inline(always)]
-        fn snippet<'c>(input: &'c str, pos_start: usize, pos_end: usize) -> &'c str {
-            let start = ahead(input, pos_start).into_iter().flat_map(|pos| ahead(input, pos)).next().unwrap_or(0usize);
-            let end = behind(input, pos_end).into_iter().flat_map(|pos| behind(input, pos)).next().unwrap_or(input.len());
-            unsafe{ ::std::str::from_utf8_unchecked(&input.as_bytes()[start..end]) }
-        }
+        let index = CharacterLookup::new(input);
         match TreeParser::new().parse(input) {
             Ok(tree) => Ok(tree),
             Err(ParseError::InvalidToken{ location }) => {
-                Err(format!("Unable to parse:\n{}\n", snippet(input, location, location)))
+                Err(format!("Unable to parse: InvalidToken.\n character: {} line: {} \n {} \n", index.get_char(location), index.get_line_number(location), index.get_line(location)))
             },
             Err(ParseError::UnrecognizedEOF{ location: _, expected: _}) => {
                 Err(format!("File terminated before it should"))
             },
             Err(ParseError::UnrecognizedToken{token: (a,_,b), expected }) => {
-                Err(format!("Unable to parse:\n{}\n", snippet(input, a, b)))
+                Err(format!("Unable to parse: UnreconginzedToken.\n start_line: {} ending_line: {}\n Offending section:\"{}\"\n{}", index.get_line_number(a), index.get_line_number(b), index.get_span(a,b), index.get_span_lines(a,b)))
             },
             Err(_) => {
                 unreachable!()

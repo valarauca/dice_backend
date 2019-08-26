@@ -9,6 +9,7 @@ pub mod parser_output;
 
 mod validator;
 mod formatter;
+mod syntaxhelper;
 
 fn main() {
 
