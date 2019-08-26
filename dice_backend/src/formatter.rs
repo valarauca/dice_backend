@@ -3,12 +3,12 @@ use std::io::{stdout,Write,Read};
 use std::fs::{OpenOptions};
 use std::fmt::Display;
 
-use super::dice_backend::parser_output::{AbstractSyntaxTree};
+use super::parser_output::{AbstractSyntaxTree};
 
 pub fn formatter(path: &str) -> Result<(),String> {
     let mut input_file = match OpenOptions::new().read(true).open(path) {
         Ok(input_file) => input_file,
-        Err(e) => return Err(format!("failed to open file={:?} with error={:?}",path.as_ref(), e))
+        Err(e) => return Err(format!("failed to open file={:?} with error={:?}",path, e))
     };
     let mut file_data = String::with_capacity(4096);
     match input_file.read_to_string(&mut file_data) {
@@ -17,10 +17,10 @@ pub fn formatter(path: &str) -> Result<(),String> {
     };
 
     let tree = match AbstractSyntaxTree::parse(&file_data) {
-        Ok(tree) => { },
+        Ok(tree) => tree,
         Err(e) => return Err(e),
     };
-    format!("{}", tree);
+    println!("{}", tree);
     Ok(())
 }
 

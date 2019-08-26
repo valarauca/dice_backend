@@ -1,3 +1,6 @@
 /target
 **/*.rs.bk
 Cargo.lock
+dice_backend/target/**
+dice_backend/Cargo.lock
+

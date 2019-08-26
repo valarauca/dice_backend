@@ -2,7 +2,7 @@ use super::parser_output::{Literal,Expression,Operation,TypeData,Structures,Stat
 
 grammar;
 pub Tree: AbstractSyntaxTree<'input> = {
-   <full_parse:( Struct ";" )+> => AbstractSyntaxTree::new(full_parse),
+   <full_parse:( Struct )+> => AbstractSyntaxTree::new(full_parse),
 };
 
 pub Stmt: Statement<'input> = {
@@ -16,7 +16,7 @@ pub Stmts: Statements<'input> = {
 
 pub Struct: Structures<'input> = {
    "analyze" <expr: Expr> ";" => Structures::new_analysis(expr),
-   "const" <name: Name> ":" <kind: Kind> "=" <expr: Expr> => Structures::new_const(name, kind, expr),
+   "const" <name: Name> ":" <kind: Kind> "=" <expr: Expr> ";" => Structures::new_const(name, kind, expr),
    "fn" <name: Name> "(" <arg: ( Name ":" Kind "," )*> <lastArg: (Name ":" Kind)? > ")" "->" <return_type: Kind> "{" <body:Stmts> "}" => Structures::new_func(name, arg, lastArg, return_type, body),
 };
 
@@ -28,11 +28,11 @@ pub Kind: TypeData = {
 };
 
 pub Name: &'input str = {
-    <cap:r"[a-zA-Z][A-Za-z0-9_]"> => cap,
+    <cap:r"[a-zA-Z][A-Za-z0-9_]*"> => cap,
 }
 
 pub Lit: Literal<'input> = {
-    <int:r"[0-9]+"> => Literal::Number(i64::from_str_radix(int,10).unwrap()),
+    <int:r"-?[0-9]+"> => Literal::Number(i64::from_str_radix(int,10).unwrap()),
     "%d{{" <name: Name> "}}" => Literal::EnvirNumber(name),
     "%b{{" <name: Name> "}}" => Literal::EnvirBool(name),
     "true" => Literal::Boolean(true),
@@ -41,6 +41,7 @@ pub Lit: Literal<'input> = {
 
 pub Expr: Expression<'input> = {
     "(" <left: Expr> <op: Op> <right: Expr> ")" => Expression::new_operation(left,op,right),
+    <name: Name> => Expression::new_var(name),
     <lit:Lit> => Expression::new_literal(lit),
     <func_name:Name> "(" <args:(Expr ",")*> <arg:Expr?> ")" => Expression::new_function(func_name,args, arg),
 };

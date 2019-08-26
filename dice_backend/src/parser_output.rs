@@ -19,9 +19,8 @@ impl<'a> fmt::Display for AbstractSyntaxTree<'a> {
     }
 }
 impl<'a> AbstractSyntaxTree<'a> {
-    pub fn new(args: Vec<(Structures<'a>,&'a str)>) -> AbstractSyntaxTree<'a> {
-        let ast: Vec<Structures<'a>> = args.into_iter().map(|tup| tup.0).collect();
-        let ast = ast.into_boxed_slice();
+    pub fn new(args: Vec<(Structures<'a>)>) -> AbstractSyntaxTree<'a> {
+        let ast = args.into_boxed_slice();
         AbstractSyntaxTree{ ast }
     }
 
@@ -81,6 +80,18 @@ impl<'a> fmt::Display for Literal<'a> {
         }
     }
 }
+#[test]
+fn test_literal_parsing() {
+    use super::value::LitParser;
+
+    let parser = LitParser::new();
+    assert!( parser.parse("false").unwrap() == Literal::Boolean(false));
+    assert!( parser.parse("true").unwrap() == Literal::Boolean(true));
+    assert!( parser.parse("15").unwrap() == Literal::Number(15i64));
+    assert!( parser.parse("-30").unwrap() == Literal::Number(-30i64));
+    assert!( parser.parse("%d{{ENV_VAR}}").unwrap() == Literal::EnvirNumber("ENV_VAR"));
+    assert!( parser.parse("%b{{ENV_VAR}}").unwrap() == Literal::EnvirBool("ENV_VAR"));
+}
 
 #[derive(Copy,Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub enum TypeData {
@@ -98,6 +109,17 @@ impl fmt::Display for TypeData {
             TypeData::CollectionOfInt => write!(f, "vec<int>"),
         }
     }
+}
+
+#[test]
+fn test_type_data_parsing() {
+    use super::value::KindParser;
+
+    let parser = KindParser::new();
+    assert!( parser.parse("bool").unwrap() == TypeData::Bool);
+    assert!( parser.parse("int").unwrap() == TypeData::Int);
+    assert!( parser.parse("vec<bool>").unwrap() == TypeData::CollectionOfBool);
+    assert!( parser.parse("vec<int>").unwrap() == TypeData::CollectionOfInt);
 }
 
 /// Operations are things we do to numbers
@@ -121,6 +143,17 @@ impl fmt::Display for Operation {
             Operation::And => write!(f, "&"), 
         }
     }
+}
+
+#[test]
+fn test_operation_parsing() {
+    use super::value::OpParser;
+
+    let parser = OpParser::new();
+    assert!( parser.parse("+").unwrap() == Operation::Add);
+    assert!( parser.parse("-").unwrap() == Operation::Sub);
+    assert!( parser.parse("*").unwrap() == Operation::Mul);
+    assert!( parser.parse("/").unwrap() == Operation::Div);
 }
 
 /// Statements are a collection of operations
@@ -176,6 +209,30 @@ impl<'a> Statement<'a> {
             expr,
         })
     }
+}
+
+#[test]
+fn test_statement_parse() {
+    use super::value::StmtParser;
+    let parser = StmtParser::new();
+
+    // let arg: int = 15
+    let stmt = Statement::Variable(VariableDeclaration{
+        name: "arg",
+        kind: TypeData::Int,
+        expr: Expression::Literal(LiteralValue{
+            lit: Literal::Number(15i64),
+        })
+    });
+    assert!(parser.parse("let arg: int = 15").unwrap() == stmt);
+
+    // return false
+    let stmt = Statement::Return(TerminalExpression{
+            expr: Expression::Literal(LiteralValue{
+                lit: Literal::Boolean(false),
+            })
+    });
+    assert!(parser.parse("return false").unwrap() == stmt);
 }
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
@@ -286,6 +343,7 @@ pub enum Expression<'a> {
     Func(FunctionInvocation<'a>),
     Literal(LiteralValue<'a>),
     Operation(OperationResult<'a>),
+    Variable(VariableReference<'a>),
 }
 impl<'a> fmt::Display for Expression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -308,8 +366,38 @@ impl<'a> fmt::Display for Expression<'a> {
             Expression::Operation(ref op) => {
                 write!(f, "( {} {} {} )", op.left, op.op, op.right)
             },
+            Expression::Variable(ref arg) => {
+                write!(f,"{}", arg.name)
+            }
         }
     }
+}
+#[test]
+fn test_expression_parsing() {
+    use super::value::ExprParser;
+
+    let parser = ExprParser::new();
+
+    // Literal Tests
+    assert!(parser.parse("15").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(15i64)}));
+    assert!(parser.parse("-35").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(-35i64)}));
+    assert!(parser.parse("-35").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(-35i64)}));
+    assert!( parser.parse("false").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Boolean(false) }));
+    assert!( parser.parse("true").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Boolean(true) }));
+    assert!( parser.parse("15").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(15i64) }));
+    assert!( parser.parse("-30").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(-30i64) }));
+    assert!( parser.parse("%d{{ENV_VAR}}").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::EnvirNumber("ENV_VAR") }));
+    assert!( parser.parse("%b{{ENV_VAR}}").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::EnvirBool("ENV_VAR") }));
+
+    // Operation Tests
+    assert!(parser.parse("( false | true )").unwrap() == Expression::Operation(OperationResult{ left: Box::new(Expression::Literal(LiteralValue{ lit: Literal::Boolean(false)})), op: Operation::Or, right: Box::new(Expression::Literal(LiteralValue{ lit:Literal::Boolean(true)})) }));
+    assert!(parser.parse("( 2067 + %d{{INPUT_VALUE_TEST}} )").unwrap() == Expression::Operation(OperationResult{ left: Box::new(Expression::Literal(LiteralValue{ lit: Literal::Number(2067)})), op: Operation::Add, right: Box::new(Expression::Literal(LiteralValue{ lit:Literal::EnvirNumber("INPUT_VALUE_TEST")})) }));
+
+    // Variable Tests
+    assert!(parser.parse("helloWorld").unwrap() == Expression::Variable(VariableReference{ name: "helloWorld" }));
+
+    // function test
+    assert!(parser.parse("roll_d6(%d{{INPUT_VALUE}})").unwrap() == Expression::Func(FunctionInvocation{ name: "roll_d6", args: vec![Expression::Literal(LiteralValue{ lit: Literal::EnvirNumber("INPUT_VALUE") })].into_boxed_slice() }));
 }
 impl<'a> Expression<'a> {
     #[inline(always)]
@@ -324,6 +412,11 @@ impl<'a> Expression<'a> {
             name,
             args: args.into_iter().map(tuple_mapper).chain(arg).collect(),
         })
+    }
+
+    #[inline(always)]
+    pub fn new_var(name: &'a str) -> Self {
+        Expression::Variable(VariableReference{ name })
     }
 
     #[inline(always)]
@@ -346,6 +439,11 @@ pub struct FunctionInvocation<'a> {
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct LiteralValue<'a> {
     pub lit: Literal<'a>
+}
+
+#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+pub struct VariableReference<'a> {
+    pub name: &'a str,
 }
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
