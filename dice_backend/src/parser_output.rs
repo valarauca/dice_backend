@@ -1,7 +1,6 @@
 use std::fmt;
 
 use lalrpop_util::ParseError;
-use super::value::{TreeParser};
 use super::syntaxhelper::{CharacterLookup};
 
 /// AbstractSyntaxTree is the top level of parse. 
@@ -25,6 +24,7 @@ impl<'a> AbstractSyntaxTree<'a> {
         AbstractSyntaxTree{ ast }
     }
 
+    /*
     /// Parse will attempt to construct an abstract syntax tree from the input
     pub fn parse<'b>(input: &'b str) -> Result<AbstractSyntaxTree<'b>,String> {
         let index = CharacterLookup::new(input);
@@ -44,6 +44,7 @@ impl<'a> AbstractSyntaxTree<'a> {
             }
         }
     }
+    */
 }
 
 /// Literal values.
@@ -247,7 +248,7 @@ fn test_statement_parse() {
                 lit: Literal::Boolean(false),
             })
     });
-    assert!(parser.parse("return false").unwrap() == stmt);
+    assert!(parser.parse("analyze false").unwrap() == stmt);
 }
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]

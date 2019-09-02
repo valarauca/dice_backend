@@ -6,6 +6,7 @@ use std::fmt::Display;
 use super::parser_output::{AbstractSyntaxTree};
 
 pub fn formatter(path: &str) -> Result<(),String> {
+    /* 
     let mut input_file = match OpenOptions::new().read(true).open(path) {
         Ok(input_file) => input_file,
         Err(e) => return Err(format!("failed to open file={:?} with error={:?}",path, e))
@@ -21,6 +22,7 @@ pub fn formatter(path: &str) -> Result<(),String> {
         Err(e) => return Err(e),
     };
     println!("{}", tree);
+    */
     Ok(())
 }
 

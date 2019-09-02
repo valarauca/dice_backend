@@ -7,65 +7,46 @@
 use std::collections::{BTreeMap,HashSet,HashMap};
 use std::hash::{Hasher,Hash};
 
-use super::parser_output::{Structures,TypeData};
+use super::parser_output::*;
 use super::seahasher::{DefaultSeaHasher};
 use super::seahash::{SeaHasher};
 
-
-pub struct GlobalScope<'a> {
-    functions_type_data: HashMap<&'a str, TypeData, DefaultSeaHasher>,    
-    functions_arg_data: HashMap<&'a str, Box<[(&'a str, TypeData)]>,
-    function_statement_data: HashMap<&'a str, Statements<'a>>
-    constants_type_data: HashMap<&'a str, TypeData, DefaultSeaHasher>,
+pub struct Analysis<'a> {
+    pub constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
+    pub functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
 }
-impl<'a> GlobalScope<'a> {
-
-    fn gather_function_data<'b>(&mut self, structures: &'b [Structures<'a>]) -> Result<(),String> {
-        for func_dec in structures.into_iter().filter_map(Structures::to_func) {
-            match self.constants_type_data.get(func_dec.name) {
-                Option::Some(_) => return Err(format!("function & constant are both named '{}' this is illegal", func_dec.name)),
+impl<'a> Analysis<'a> {
+    fn add_const<'b>(&mut self, arg: &'b Structures<'a>) -> Option<Result<(),String>> {
+        let lambda = | arg: &'b ConstantDeclaration<'a>| -> Result<(),String> {
+            // check functions first b/c no side effects
+            match self.functions.get(arg.name) {
+                Option::Some(is_a_func) => return Err(format!("constant named=\"{}\" cannot be declared, function=\"{}\" uses that name", is_a_func.name, is_a_func.name)),
                 Option::None => { },
             };
-            match self.functions_type_data.insert(func_dec.name, func_dec.ret) {
-                Option::Some(_) => return Err(format!("multiple functions with name '{}' encountered", func_dec.name)),
-                Option::None => { }
-            };
-            self.functions_arg_data.insert(func_dec.name, func_dec.args.clone());
-        }
-        Ok(())
-    }
-
-    fn gather_constant_type_data<'b>(&mut self, structures: &'b [Structures<'a>]) -> Result<(), String> {
-        for cons in structures.into_iter().filter_map(Structures::to_const) {
-            match self.functions_type_data.get(cons.name) {
-                Option::Some(_) => return Err(format!("function & constant are both named '{}' this is illegal", cons.name)),
+            match self.constants.insert(arg.name, arg.clone()) {
+                Option::Some(already_exists) => return Err(format!("const named=\"{}\" already exists", already_exists.name)),
                 Option::None => { },
             };
-            match self.cons_type_data.insert(cons.name, cons.kind) {
-                Option::Some(_) => return Err(format!("multiple constants with name '{}' encountered", cons.name)),
-                Option::None => { }
-            };
-        }
-        Ok(())
+            Ok(())
+        };
+        Structures::to_const(arg).into_iter().map(lambda).next()
     }
-    
-    /*
-     * General to avoid low-hanging-fruit syntax errors
-     *
-     */ 
-    fn multiple_analyze<'b>(structures: &'b [Structures<'a>]) -> Result<(),String> {
-        let analyze_statements = structures.iter().filter(|item| match item {
-            Structures::Analyze(_) => true,
-            _ => false,
-        }).count();
-        if analyze_statements > 1 {
-            return Err(format!("There are only be 1 analyze statement per input"));
-        }
-        Ok(())
+    fn add_function<'b>(&mut self, arg: &'b Structures<'a>) -> Option<Result<(),String>> {
+        let lambda = | arg: &'b FunctionDeclaration<'a>| -> Result<(),String> {
+            match self.constants.get(arg.name) {
+                Option::Some(is_a_const) => return Err(format!("function named=\"{}\" cannot be declared, constant=\"{}\" uses that name", is_a_const.name, is_a_const.name)),
+                Option::None => { },
+            };
+            match self.functions.insert(arg.name, arg.clone()) {
+                Option::Some(already_exists) => return Err(format!("function named=\"{}\" already exists", already_exists.name)),
+                Option::None => { },
+            };
+            Ok(())
+        };
+        Structures::to_func(arg).into_iter().map(lambda).next()
     }
 }
 
-/*
 /// BlockExpression is the result of expresion lowering.
 /// when preformed it. Block Expressions, unlike normal
 /// expressions are not a recrusive data type.
@@ -94,7 +75,7 @@ impl<'a> BlockExpression<'a> {
 /// a "real" SSA.
 pub struct BasicBlock<'a> {
      expressions: BTreeMap<u64,BlockExpression<'a>>,
-     vars: BTreeMap<u64,(&'a str,Option<TypeData>)>,
+     vars: BTreeMap<u64,(&'a str, Option<TypeData>)>,
 }
 impl<'a> BasicBlock<'a> {
     /*
@@ -103,7 +84,6 @@ impl<'a> BasicBlock<'a> {
     }
     */
 
-/*
     fn check_duplicate_vars<'b>(statements: &'b Statements<'a>) -> Result<(),String> {
         let mut map: HashSet<&'b str, DefaultSeaHasher>  = HashSet::default();
         for var in statements.data.iter().filter_map(Statement::get_variable_declaration) {
@@ -113,7 +93,6 @@ impl<'a> BasicBlock<'a> {
         }
         Ok(())
     }
-*/
 
     /// add_expression will add an expression to the internal collection.
     /// if the expression already exists, it will return the ID to that 
@@ -141,4 +120,3 @@ impl<'a> BasicBlock<'a> {
         hash_value
     }
 }
-*/
