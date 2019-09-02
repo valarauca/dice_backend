@@ -1,4 +1,5 @@
-
+#![allow(unused_imports)]
+extern crate seahash;
 extern crate lalrpop_util;
 extern crate regex;
 extern crate clap;
@@ -10,7 +11,8 @@ pub mod parser_output;
 mod validator;
 mod formatter;
 mod syntaxhelper;
-mod runtime_ast;
+mod notacfg;
+mod seahasher;
 
 fn main() {
 

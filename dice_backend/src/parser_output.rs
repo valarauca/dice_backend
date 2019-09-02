@@ -54,6 +54,16 @@ pub enum Literal<'a> {
     EnvirBool(&'a str),
     EnvirNumber(&'a str),
 }
+impl<'a> Literal<'a> {
+    pub fn get_type(&self) -> TypeData {
+        match self {
+            Literal::Number(_) |
+            Literal::EnvirNumber(_) => TypeData::Int,
+            Literal::Boolean(_) |
+            Literal::EnvirBool(_) => TypeData::Bool,
+	}
+    }
+}
 impl<'a> fmt::Display for Literal<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -157,7 +167,7 @@ fn test_operation_parsing() {
 /// Statements are a collection of operations
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct Statements<'a> {
-    data: Box<[Statement<'a>]>,
+    pub data: Box<[Statement<'a>]>,
 }
 impl<'a> fmt::Display for Statements<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -193,6 +203,13 @@ impl<'a> fmt::Display for Statement<'a> {
     }
 }
 impl<'a> Statement<'a> {
+
+    pub fn get_variable_declaration<'b>(s: &'b Self) -> Option<&'b VariableDeclaration> {
+        match s {
+            Statement::Variable(ref var) => Some(var),
+            _ => None
+        }
+    }
 
     #[inline(always)]
     pub fn new_var(name: &'a str, kind: TypeData, expr: Expression<'a>) -> Statement<'a> {
@@ -275,6 +292,20 @@ impl<'a> fmt::Display for Structures<'a> {
 }
 impl<'a> Structures<'a> {
 
+    pub fn to_func<'b>(s: &'b Structures<'a>) -> Option<&'b FunctionDeclaration<'a>> {
+        match s {
+            Structures::Func(func) => Some(func),
+            _ => None
+        }
+    }
+
+    pub fn to_const<'b>(s: &'b Structures<'a>) -> Option<&'b ConstantDeclaration<'a>> {
+        match s {
+            Structures::Constant(cons) => Some(cons),
+            _ => None
+        }
+    }
+
     #[inline(always)]
     pub fn new_const(name: &'a str, kind:TypeData, expr: Expression<'a>) -> Structures<'a> {
         Structures::Constant(ConstantDeclaration {
@@ -342,6 +373,9 @@ pub enum Expression<'a> {
     Literal(LiteralValue<'a>),
     Operation(OperationResult<'a>),
     Variable(VariableReference<'a>),
+}
+impl<'a> AsRef<Expression<'a>> for Expression<'a> {
+    fn as_ref(&self) -> &Expression<'a> { self }
 }
 impl<'a> fmt::Display for Expression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
