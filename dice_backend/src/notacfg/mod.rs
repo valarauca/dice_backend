@@ -6,17 +6,79 @@
 
 use std::collections::{BTreeMap,HashSet,HashMap};
 use std::hash::{Hasher,Hash};
+use std::mem::replace;
 
 use super::parser_output::*;
 use super::seahasher::{DefaultSeaHasher};
 use super::seahash::{SeaHasher};
 
+
 pub struct Analysis<'a> {
     pub constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
     pub functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
+    pub analysis: Option<AnalysisDeclaration<'a>>,
 }
 impl<'a> Analysis<'a> {
-    fn add_const<'b>(&mut self, arg: &'b Structures<'a>) -> Option<Result<(),String>> {
+
+
+    pub fn new<'b>(args: &'b [Structures<'a>]) -> Result<Analysis<'a>,String> {
+        let mut analysis = Analysis {
+            constants: HashMap::default(),
+            functions: HashMap::default(),
+            analysis: None,
+        };
+        analysis.populate_std();
+        for item in args {
+            // actions do nothing unless items is of
+            // correct enum variance. when not it,
+            // returns okay.
+            analysis.add_const(item)?;
+            analysis.add_function(item)?;
+            analysis.add_analysis(item)?;
+        } 
+        Ok(analysis)
+    }
+
+    fn populate_std(&mut self) {
+        self.functions.insert("roll_d6", FunctionDeclaration{
+            name: "roll_d6", 
+            args: vec![("num", TypeData::Int)].into_boxed_slice(),
+            ret: TypeData::CollectionOfInt,
+            body: Statements {
+                stdlib: true,
+                data: vec![].into_boxed_slice(),
+            }
+        });
+        self.functions.insert("roll_d3", FunctionDeclaration{
+            name: "roll_d3", 
+            args: vec![("num", TypeData::Int)].into_boxed_slice(),
+            ret: TypeData::CollectionOfInt,
+            body: Statements {
+                stdlib: true,
+                data: vec![].into_boxed_slice(),
+            }
+        });
+        self.functions.insert("filter", FunctionDeclaration{
+            name: "filter", 
+            args: vec![("test", TypeData::CollectionOfBool),("collection", TypeData::CollectionOfInt)].into_boxed_slice(),
+            ret: TypeData::CollectionOfBool,
+            body: Statements {
+                stdlib: true,
+                data: vec![].into_boxed_slice(),
+            }
+        });
+        self.functions.insert("sum", FunctionDeclaration{
+            name: "sum", 
+            args: vec![("collection", TypeData::CollectionOfInt)].into_boxed_slice(),
+            ret: TypeData::Int,
+            body: Statements {
+                stdlib: true,
+                data: vec![].into_boxed_slice(),
+            }
+        });
+    }
+
+    fn add_const<'b>(&mut self, arg: &'b Structures<'a>) -> Result<(),String> {
         let lambda = | arg: &'b ConstantDeclaration<'a>| -> Result<(),String> {
             // check functions first b/c no side effects
             match self.functions.get(arg.name) {
@@ -29,9 +91,19 @@ impl<'a> Analysis<'a> {
             };
             Ok(())
         };
-        Structures::to_const(arg).into_iter().map(lambda).next()
+        Structures::to_const(arg).into_iter().map(lambda).next().unwrap_or(Ok(()))
     }
-    fn add_function<'b>(&mut self, arg: &'b Structures<'a>) -> Option<Result<(),String>> {
+    fn add_analysis<'b>(&mut self, arg: &'b Structures<'a>) -> Result<(),String> {
+ 
+        let lambda = | arg: &'b AnalysisDeclaration<'a>| -> Result<(),String> {
+            match replace(&mut self.analysis, Some(arg.clone())) {
+                Option::Some(old) => Err(format!("analyze statement is already declared\n\n{}\n\nsecond declaration\n\n{}\n\n is error", old, arg)),
+                Option::None => Ok(()),
+            }
+        };
+        Structures::to_analysis(arg).into_iter().map(lambda).next().unwrap_or(Ok(()))
+    }
+    fn add_function<'b>(&mut self, arg: &'b Structures<'a>) -> Result<(),String> {
         let lambda = | arg: &'b FunctionDeclaration<'a>| -> Result<(),String> {
             match self.constants.get(arg.name) {
                 Option::Some(is_a_const) => return Err(format!("function named=\"{}\" cannot be declared, constant=\"{}\" uses that name", is_a_const.name, is_a_const.name)),
@@ -43,7 +115,7 @@ impl<'a> Analysis<'a> {
             };
             Ok(())
         };
-        Structures::to_func(arg).into_iter().map(lambda).next()
+        Structures::to_func(arg).into_iter().map(lambda).next().unwrap_or(Ok(()))
     }
 }
 
@@ -65,6 +137,8 @@ impl<'a> BlockExpression<'a> {
         seahash.finish() 
     }
 }
+
+/*
 
 /// BasicBlock is in essence a function's body.
 /// It can also be used for control structures
@@ -120,3 +194,4 @@ impl<'a> BasicBlock<'a> {
         hash_value
     }
 }
+*/

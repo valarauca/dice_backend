@@ -168,6 +168,7 @@ fn test_operation_parsing() {
 /// Statements are a collection of operations
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct Statements<'a> {
+    pub stdlib: bool,
     pub data: Box<[Statement<'a>]>,
 }
 impl<'a> fmt::Display for Statements<'a> {
@@ -184,6 +185,7 @@ impl<'a> Statements<'a> {
         #[inline(always)] fn mapper<'a>(tup: (Statement<'a>,&'a str)) -> Statement<'a> { tup.0 }
         let collect: Vec<Statement<'a>> = arg.into_iter().map(mapper).collect();
         Statements {
+            stdlib: false,
             data: collect.into_boxed_slice(),
         }
     }
@@ -307,6 +309,13 @@ impl<'a> Structures<'a> {
         }
     }
 
+    pub fn to_analysis<'b>(s: &'b Structures<'a>) -> Option<&'b AnalysisDeclaration<'a> > {
+        match s {
+            Structures::Analyze(cons) => Some(cons),
+            _ => None
+        }
+    }
+
     #[inline(always)]
     pub fn new_const(name: &'a str, kind:TypeData, expr: Expression<'a>) -> Structures<'a> {
         Structures::Constant(ConstantDeclaration {
@@ -357,6 +366,11 @@ pub struct FunctionDeclaration<'a> {
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct AnalysisDeclaration<'a> {
     pub expr: Expression<'a>
+}
+impl<'a> fmt::Display for AnalysisDeclaration<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "analyze {};\n", self.expr)
+    }
 }
 
 /// ConstantDeclaration is when a constant is declared globally.
