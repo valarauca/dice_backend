@@ -12,17 +12,19 @@ use super::parser_output::*;
 use super::seahasher::{DefaultSeaHasher};
 use super::seahash::{SeaHasher};
 
-
-pub struct Analysis<'a> {
+/// Namespace represents the pre-parsing of the of the AST.
+/// It will attempt to ensure there are no collisions with
+/// the standard library, or the input program.
+pub struct Namespace<'a> {
     pub constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
     pub functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
     pub analysis: Option<AnalysisDeclaration<'a>>,
 }
-impl<'a> Analysis<'a> {
+impl<'a> Namespace<'a> {
 
 
-    pub fn new<'b>(args: &'b [Structures<'a>]) -> Result<Analysis<'a>,String> {
-        let mut analysis = Analysis {
+    pub fn new<'b>(args: &'b [Structures<'a>]) -> Result<Namespace<'a>,String> {
+        let mut analysis = Namespace {
             constants: HashMap::default(),
             functions: HashMap::default(),
             analysis: None,
@@ -39,6 +41,22 @@ impl<'a> Analysis<'a> {
         Ok(analysis)
     }
 
+    /// returns a function declaration for a specific name to allow for argument &
+    /// and type checking.
+    pub fn get_function<'b>(&'b self, arg: &str) -> Option<&'b FunctionDeclaration<'a>> {
+        self.functions.get(arg)
+    }
+
+    /// returns a constant declaration for typing checking and validation.
+    pub fn get_constant<'b>(&'b self, arg: &str) -> Option<&'b ConstantDeclaration<'a>> {
+        self.constants.get(arg)
+    }
+
+    /// checks if this name already exists
+    pub fn is_name_defined(&self, arg: &str) -> bool {
+        self.get_constant(arg).is_some() || self.get_function(arg).is_some()
+    }
+
     fn populate_std(&mut self) {
         self.functions.insert("roll_d6", FunctionDeclaration{
             name: "roll_d6", 
@@ -52,6 +70,15 @@ impl<'a> Analysis<'a> {
         self.functions.insert("roll_d3", FunctionDeclaration{
             name: "roll_d3", 
             args: vec![("num", TypeData::Int)].into_boxed_slice(),
+            ret: TypeData::CollectionOfInt,
+            body: Statements {
+                stdlib: true,
+                data: vec![].into_boxed_slice(),
+            }
+        });
+        self.functions.insert("roll", FunctionDeclaration{
+            name: "roll", 
+            args: vec![("max", TypeData::Int),("min",TypeData::Int),("num",TypeData::Int)].into_boxed_slice(),
             ret: TypeData::CollectionOfInt,
             body: Statements {
                 stdlib: true,
@@ -124,12 +151,57 @@ impl<'a> Analysis<'a> {
 /// expressions are not a recrusive data type.
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub enum BlockExpression<'a> {
-    Constant(Literal<'a>,Option<TypeData>),
-    Func(&'a str, Box<[u64]>,Option<TypeData>),
-    Var(&'a str,Option<TypeData>),
-    Op(u64, Operation, u64, Option<TypeData>),
+    ConstantValue(Literal<'a>,TypeData),
+    ExternalConstant(&'a str,TypeData),
+    Func(&'a str, Box<[BlockExpression<'a>]>,TypeData),
+    Var(&'a str,TypeData),
+    Op(Box<BlockExpression<'a>>, Operation, Box<BlockExpression<'a>>),
 }
 impl<'a> BlockExpression<'a> {
+
+    /// resolving the typing data for the block expression
+    fn get_type(&self) -> Result<TypeData,String> {
+       match self {
+           BlockExpression::ConstantValue(_,kind) => Ok(kind.clone()),
+           BlockExpression::ExternalConstant(_,kind) => Ok(kind.clone()),
+           BlockExpression::Func(_,_,kind) => Ok(kind.clone()),
+           BlockExpression::Var(_,kind) => Ok(kind.clone()),
+           BlockExpression::Op(ref left, op, ref right) => match op {
+               Operation::Sub |
+               Operation::Mul |
+               Operation::Div |
+               Operation::Add => match (left.get_type()?, right.get_type()?) {
+                   (TypeData::Int,TypeData::Int) => Ok(TypeData::Int),
+                   (TypeData::Int,TypeData::CollectionOfInt) => Ok(TypeData::CollectionOfInt),
+                   (TypeData::CollectionOfInt,TypeData::Int) => Ok(TypeData::Int),
+                   (TypeData::CollectionOfInt,TypeData::CollectionOfInt) => Ok(TypeData::CollectionOfInt),
+                   // TODO this sucks
+                   (left, right) => Err(format!("type error. Expression on ({} {} {}) is illegal",left, op, right)),
+               },
+               Operation::Equal |
+               Operation::GreaterThan |
+               Operation::LessThan |
+               Operation::GreaterThanEqual |
+               Operation::LessThanEqual => match (left.get_type()?, right.get_type()?) {
+                   (TypeData::Int,TypeData::Int) => Ok(TypeData::Bool),
+                   (TypeData::Int,TypeData::CollectionOfInt) => Ok(TypeData::CollectionOfBool),
+                   (TypeData::CollectionOfInt,TypeData::Int) => Ok(TypeData::CollectionOfBool),
+                   (TypeData::CollectionOfInt,TypeData::CollectionOfInt) => Ok(TypeData::CollectionOfBool),
+                   // TODO this sucks
+                   (left, right) => Err(format!("type error. Expression on ({} {} {}) is illegal",left, op, right)),
+               },
+               Operation::Or |
+               Operation::And => match (left.get_type()?, right.get_type()?) {
+                   (TypeData::Bool,TypeData::Bool) => Ok(TypeData::Bool),
+                   (TypeData::Bool,TypeData::CollectionOfBool) => Ok(TypeData::CollectionOfBool),
+                   (TypeData::CollectionOfBool,TypeData::Bool) => Ok(TypeData::CollectionOfBool),
+                   (TypeData::CollectionOfBool,TypeData::CollectionOfBool) => Ok(TypeData::CollectionOfBool),
+                   // TODO this sucks
+                   (left, right) => Err(format!("type error. Expression on ({} {} {}) is illegal",left, op, right)),
+               },
+           }
+       }
+    }
 
     fn get_hash(&self) -> u64 {
         let mut seahash = SeaHasher::default();
@@ -138,7 +210,6 @@ impl<'a> BlockExpression<'a> {
     }
 }
 
-/*
 
 /// BasicBlock is in essence a function's body.
 /// It can also be used for control structures
@@ -147,51 +218,88 @@ impl<'a> BlockExpression<'a> {
 ///
 /// This is an intermediate step to producing
 /// a "real" SSA.
-pub struct BasicBlock<'a> {
+pub struct BasicBlock<'a,'b> {
+     namespace: &'b Namespace<'a>,
      expressions: BTreeMap<u64,BlockExpression<'a>>,
-     vars: BTreeMap<u64,(&'a str, Option<TypeData>)>,
+     vars: HashMap<&'a str, VariableDeclaration<'a>, DefaultSeaHasher>,
+     return_expression: Option<TerminalExpression<'a>>,
 }
-impl<'a> BasicBlock<'a> {
-    /*
-    pub fn new(statements: Statements<'a>) -> Result<BasicBlock<'a>,String> {
-        BasicBlock::check_duplicate_vars(statements.data.into_iter())?;
-    }
-    */
+impl<'a,'b> BasicBlock<'a,'b> {
 
-    fn check_duplicate_vars<'b>(statements: &'b Statements<'a>) -> Result<(),String> {
-        let mut map: HashSet<&'b str, DefaultSeaHasher>  = HashSet::default();
-        for var in statements.data.iter().filter_map(Statement::get_variable_declaration) {
-            if map.insert(var.name) {
-                return Err(format!("variable named {} is used twice", var.name));
-            }
-        }
-        Ok(())
-    }
-
-    /// add_expression will add an expression to the internal collection.
-    /// if the expression already exists, it will return the ID to that 
-    /// existing expression
-    fn add_expression<R: AsRef<Expression<'a>>>(&mut self, expr: &R) -> u64 {
-        let block_expr = match expr.as_ref() {
-            Expression::Func(func) => {
-                let mut args = func.args.iter().map(|arg| self.add_expression(arg)).collect::<Vec<u64>>().into_boxed_slice();
-		BlockExpression::Func(func.name, args, None)
-            },
-            Expression::Variable(var_ref) => {
-                BlockExpression::Var(var_ref.name, None)
-            },
-            Expression::Literal(lit_val) => {
-                BlockExpression::Constant(lit_val.lit.clone(), Some(lit_val.lit.get_type()))
-            },
-            Expression::Operation(op) => {
-                let left = self.add_expression(&op.left);
-                let right = self.add_expression(&op.right); 
-                BlockExpression::Op(left, op.op, right, None)
-            }
+    fn new(external_names: &'b Namespace<'a>, statements: Statements<'a>) -> Result<BasicBlock<'a,'b>,String> {
+        let mut bb = BasicBlock {
+            namespace: external_names,
+            expressions: BTreeMap::default(),
+            vars: HashMap::default(),
+            return_expression: None,
         };
-        let hash_value = block_expr.get_hash();
-        self.expressions.insert(hash_value, block_expr);
-        hash_value
+        Ok(bb)
+    }
+
+
+    fn add_statement<'c>(&mut self, stmt: &'c Statement<'a>) -> Result<(),String> {
+        match stmt {
+            Statement::Variable(ref var) => {
+                if self.namespace.is_name_defined(var.name) {
+                    Err(format!("variable:'{}' defined in\n{}\ncollides with function/constant name", var.name, stmt))
+                } else {
+                    match self.vars.insert(var.name, var.clone()) {
+                        Option::None => Ok(()),
+                        Option::Some(_) => Err(format!("variable of name '{}' is defined multiple times", var.name)),
+                    }
+                } 
+            }, 
+            Statement::Return(ref term) => {
+                match replace(&mut self.return_expression, Some(term.clone())) {
+                    Option::None => Ok(()),
+                    Option::Some(old_term) => Err(format!("multiple return statements\nold:\n{}\nnew:\n{}\n", old_term, term))
+                }
+            },
+        }
+    }
+
+    fn convert_expression(&self, expr: &Expression<'a>) -> Result<BlockExpression<'a>,String> {
+        match expr {
+            Expression::Literal(ref lit) => Ok(BlockExpression::ConstantValue(lit.lit.clone(), lit.lit.get_type())),
+            Expression::Variable(ref var) => match self.get_constant_type(var.name) {
+                Option::Some(kind) => Ok(BlockExpression::ExternalConstant(var.name, kind)),
+                Option::None => match self.get_var_type(var.name) {
+                    Option::Some(kind) => Ok(BlockExpression::Var(var.name, kind)),
+                    Option::None => Err(format!("variable '{}' is referenced but not defined", var.name))
+                }
+            },
+            Expression::Func(ref func) => match self.namespace.get_function(func.name) {
+                Option::None => Err(format!("function invocation: '{}' cannot be made function not found", func.name)),
+                Option::Some(ref func_data) => {
+                    if func_data.args.len() == func.args.len() {
+                        let mut arg_vec = Vec::with_capacity(func.args.len());
+                        for (index,arg) in func.args.iter().enumerate() {
+                            let block_expr = self.convert_expression(arg)?;
+                            let expected_type = func_data.args[index].1.clone();
+                            let found_type = block_expr.get_type()?;
+                            if found_type != expected_type {
+                                return Err(format!("expression: '{}' has an error the {} argument to function '{}' is of the incorrect type. Expected type:{} Found type:{}", expr, index, func_data, expected_type, found_type));
+                            }
+                            arg_vec.push(block_expr);
+                        }
+                        Ok(BlockExpression::Func(func.name, arg_vec.into_boxed_slice(), func_data.ret))
+                    } else {
+                         Err(format!("function invocation: '{}' has the name of function: '{}' but incorrect argument count. Expected: {} Found: {}", func, func_data, func_data.args.len(), func.args.len()))
+                    }
+                }
+            },
+            Expression::Operation(ref op) => {
+                let left = Box::new(self.convert_expression(op.left.as_ref())?);
+                let right = Box::new( self.convert_expression(op.right.as_ref())?);
+                Ok(BlockExpression::Op(left,op.op.clone(),right))
+            },
+        }
+    }
+
+    fn get_constant_type(&self, name:&str) -> Option<TypeData> {
+        self.namespace.get_constant(name).map(|constant| constant.kind.clone())
+    }
+    fn get_var_type(&self, name:&str) -> Option<TypeData> {
+        self.vars.get(name).map(|var| var.kind.clone())
     }
 }
-*/

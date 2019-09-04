@@ -257,6 +257,11 @@ fn test_statement_parse() {
 pub struct TerminalExpression<'a> {
     pub expr: Expression<'a>
 }
+impl<'a> fmt::Display for TerminalExpression<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "return {};", self.expr)
+    }
+}
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub struct VariableDeclaration<'a> {
@@ -360,6 +365,20 @@ pub struct FunctionDeclaration<'a> {
     pub args: Box<[(&'a str,TypeData)]>,
     pub ret: TypeData,
     pub body: Statements<'a>
+}
+impl<'a> fmt::Display for FunctionDeclaration<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "func {}(", self.name)?;
+        let last_arg = self.args.len()-1;
+        for (pos,arg) in self.args.iter().enumerate() {
+          if last_arg == pos {
+              write!(f, "{}: {}", arg.0, arg.1)?;
+          } else {
+              write!(f,"{}: {}, ", arg.0, arg.1)?;
+          }
+      }
+      write!(f, " )")
+    }
 }
 
 /// AnalysisDeclaraction is one of the last top level structures.
@@ -481,6 +500,20 @@ impl<'a> Expression<'a> {
 pub struct FunctionInvocation<'a> {
     pub name: &'a str,
     pub args: Box<[Expression<'a>]>,
+}
+impl<'a> fmt::Display for FunctionInvocation<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f,"{}( ", self.name)?;
+      let last_arg = self.args.len()-1;
+      for (pos,arg) in self.args.iter().enumerate() {
+          if last_arg == pos {
+              write!(f, "{}", arg)?;
+          } else {
+              write!(f,"{}, ", arg)?;
+          }
+      }
+      write!(f, " )")
+    }
 }
 
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
