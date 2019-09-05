@@ -1,9 +1,9 @@
 use std::fmt;
 
+use super::syntaxhelper::CharacterLookup;
 use lalrpop_util::ParseError;
-use super::syntaxhelper::{CharacterLookup};
 
-/// AbstractSyntaxTree is the top level of parse. 
+/// AbstractSyntaxTree is the top level of parse.
 ///
 /// Additional passes are made before a "parse" is
 /// complete to ensure that literals are well formed.
@@ -21,7 +21,7 @@ impl<'a> fmt::Display for AbstractSyntaxTree<'a> {
 impl<'a> AbstractSyntaxTree<'a> {
     pub fn new(args: Vec<(Structures<'a>)>) -> AbstractSyntaxTree<'a> {
         let ast = args.into_boxed_slice();
-        AbstractSyntaxTree{ ast }
+        AbstractSyntaxTree { ast }
     }
 
     /*
@@ -48,7 +48,7 @@ impl<'a> AbstractSyntaxTree<'a> {
 }
 
 /// Literal values.
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Literal<'a> {
     Number(i64),
     Boolean(bool),
@@ -58,22 +58,22 @@ pub enum Literal<'a> {
 impl<'a> Literal<'a> {
     pub fn get_type(&self) -> TypeData {
         match self {
-            Literal::Number(_) |
-            Literal::EnvirNumber(_) => TypeData::Int,
-            Literal::Boolean(_) |
-            Literal::EnvirBool(_) => TypeData::Bool,
-	}
+            Literal::Number(_) | Literal::EnvirNumber(_) => TypeData::Int,
+            Literal::Boolean(_) | Literal::EnvirBool(_) => TypeData::Bool,
+        }
     }
 }
 impl<'a> fmt::Display for Literal<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Literal::Number(ref num) => write!(f, "{}", *num),
-            Literal::Boolean(ref var) => if *var {
-                write!(f, "true")
-            } else {
-                write!(f, "false")
-            },
+            Literal::Boolean(ref var) => {
+                if *var {
+                    write!(f, "true")
+                } else {
+                    write!(f, "false")
+                }
+            }
             Literal::EnvirBool(ref name) => write!(f, "%b{{{{{}}}}}", name),
             Literal::EnvirNumber(ref name) => write!(f, "%d{{{{{}}}}}", name),
         }
@@ -84,15 +84,15 @@ fn test_literal_parsing() {
     use super::value::LitParser;
 
     let parser = LitParser::new();
-    assert!( parser.parse("false").unwrap() == Literal::Boolean(false));
-    assert!( parser.parse("true").unwrap() == Literal::Boolean(true));
-    assert!( parser.parse("15").unwrap() == Literal::Number(15i64));
-    assert!( parser.parse("-30").unwrap() == Literal::Number(-30i64));
-    assert!( parser.parse("%d{{ENV_VAR}}").unwrap() == Literal::EnvirNumber("ENV_VAR"));
-    assert!( parser.parse("%b{{ENV_VAR}}").unwrap() == Literal::EnvirBool("ENV_VAR"));
+    assert!(parser.parse("false").unwrap() == Literal::Boolean(false));
+    assert!(parser.parse("true").unwrap() == Literal::Boolean(true));
+    assert!(parser.parse("15").unwrap() == Literal::Number(15i64));
+    assert!(parser.parse("-30").unwrap() == Literal::Number(-30i64));
+    assert!(parser.parse("%d{{ENV_VAR}}").unwrap() == Literal::EnvirNumber("ENV_VAR"));
+    assert!(parser.parse("%b{{ENV_VAR}}").unwrap() == Literal::EnvirBool("ENV_VAR"));
 }
 
-#[derive(Copy,Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeData {
     Bool,
     Int,
@@ -102,7 +102,7 @@ pub enum TypeData {
 impl fmt::Display for TypeData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TypeData::Bool => write!(f, "bool"), 
+            TypeData::Bool => write!(f, "bool"),
             TypeData::Int => write!(f, "int"),
             TypeData::CollectionOfBool => write!(f, "vec<bool>"),
             TypeData::CollectionOfInt => write!(f, "vec<int>"),
@@ -115,14 +115,14 @@ fn test_type_data_parsing() {
     use super::value::KindParser;
 
     let parser = KindParser::new();
-    assert!( parser.parse("bool").unwrap() == TypeData::Bool);
-    assert!( parser.parse("int").unwrap() == TypeData::Int);
-    assert!( parser.parse("vec<bool>").unwrap() == TypeData::CollectionOfBool);
-    assert!( parser.parse("vec<int>").unwrap() == TypeData::CollectionOfInt);
+    assert!(parser.parse("bool").unwrap() == TypeData::Bool);
+    assert!(parser.parse("int").unwrap() == TypeData::Int);
+    assert!(parser.parse("vec<bool>").unwrap() == TypeData::CollectionOfBool);
+    assert!(parser.parse("vec<int>").unwrap() == TypeData::CollectionOfInt);
 }
 
 /// Operations are things we do to numbers
-#[derive(Copy,Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Operation {
     Add,
     Sub,
@@ -139,17 +139,17 @@ pub enum Operation {
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Operation::Add => write!(f, "+"), 
-            Operation::Sub => write!(f, "-"), 
-            Operation::Mul => write!(f, "*"), 
-            Operation::Div => write!(f, "/"), 
-            Operation::Or => write!(f, "|"), 
-            Operation::And => write!(f, "&"), 
-            Operation::Equal => write!(f,"=="),
-            Operation::GreaterThan => write!(f,">"),
-            Operation::LessThan => write!(f,"<"),
+            Operation::Add => write!(f, "+"),
+            Operation::Sub => write!(f, "-"),
+            Operation::Mul => write!(f, "*"),
+            Operation::Div => write!(f, "/"),
+            Operation::Or => write!(f, "|"),
+            Operation::And => write!(f, "&"),
+            Operation::Equal => write!(f, "=="),
+            Operation::GreaterThan => write!(f, ">"),
+            Operation::LessThan => write!(f, "<"),
             Operation::GreaterThanEqual => write!(f, ">="),
-            Operation::LessThanEqual => write!(f,"<="),
+            Operation::LessThanEqual => write!(f, "<="),
         }
     }
 }
@@ -159,14 +159,14 @@ fn test_operation_parsing() {
     use super::value::OpParser;
 
     let parser = OpParser::new();
-    assert!( parser.parse("+").unwrap() == Operation::Add);
-    assert!( parser.parse("-").unwrap() == Operation::Sub);
-    assert!( parser.parse("*").unwrap() == Operation::Mul);
-    assert!( parser.parse("/").unwrap() == Operation::Div);
+    assert!(parser.parse("+").unwrap() == Operation::Add);
+    assert!(parser.parse("-").unwrap() == Operation::Sub);
+    assert!(parser.parse("*").unwrap() == Operation::Mul);
+    assert!(parser.parse("/").unwrap() == Operation::Div);
 }
 
 /// Statements are a collection of operations
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Statements<'a> {
     pub stdlib: bool,
     pub data: Box<[Statement<'a>]>,
@@ -181,8 +181,11 @@ impl<'a> fmt::Display for Statements<'a> {
 }
 impl<'a> Statements<'a> {
     #[inline(always)]
-    pub fn new(arg: Vec<(Statement<'a>,&'a str)>) -> Statements<'a> {
-        #[inline(always)] fn mapper<'a>(tup: (Statement<'a>,&'a str)) -> Statement<'a> { tup.0 }
+    pub fn new(arg: Vec<(Statement<'a>, &'a str)>) -> Statements<'a> {
+        #[inline(always)]
+        fn mapper<'a>(tup: (Statement<'a>, &'a str)) -> Statement<'a> {
+            tup.0
+        }
         let collect: Vec<Statement<'a>> = arg.into_iter().map(mapper).collect();
         Statements {
             stdlib: false,
@@ -192,7 +195,7 @@ impl<'a> Statements<'a> {
 }
 
 /// Statements are expressions within a function
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Statement<'a> {
     Variable(VariableDeclaration<'a>),
     Return(TerminalExpression<'a>),
@@ -200,32 +203,29 @@ pub enum Statement<'a> {
 impl<'a> fmt::Display for Statement<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Statement::Variable(ref var) => write!(f,"    let {}: {} = {};\n", var.name, var.kind, var.expr),
-            Statement::Return(ref ret) => write!(f,"    return {};\n", ret.expr),
+            Statement::Variable(ref var) => {
+                write!(f, "    let {}: {} = {};\n", var.name, var.kind, var.expr)
+            }
+            Statement::Return(ref ret) => write!(f, "    return {};\n", ret.expr),
         }
     }
 }
 impl<'a> Statement<'a> {
-
     pub fn get_variable_declaration<'b>(s: &'b Self) -> Option<&'b VariableDeclaration> {
         match s {
             Statement::Variable(ref var) => Some(var),
-            _ => None
+            _ => None,
         }
     }
 
     #[inline(always)]
     pub fn new_var(name: &'a str, kind: TypeData, expr: Expression<'a>) -> Statement<'a> {
-        Statement::Variable(VariableDeclaration{
-            name, kind, expr,
-        })
+        Statement::Variable(VariableDeclaration { name, kind, expr })
     }
 
     #[inline(always)]
     pub fn new_ret(expr: Expression<'a>) -> Statement<'a> {
-        Statement::Return(TerminalExpression{
-            expr,
-        })
+        Statement::Return(TerminalExpression { expr })
     }
 }
 
@@ -235,27 +235,27 @@ fn test_statement_parse() {
     let parser = StmtParser::new();
 
     // let arg: int = 15
-    let stmt = Statement::Variable(VariableDeclaration{
+    let stmt = Statement::Variable(VariableDeclaration {
         name: "arg",
         kind: TypeData::Int,
-        expr: Expression::Literal(LiteralValue{
+        expr: Expression::Literal(LiteralValue {
             lit: Literal::Number(15i64),
-        })
+        }),
     });
     assert!(parser.parse("let arg: int = 15").unwrap() == stmt);
 
     // return false
-    let stmt = Statement::Return(TerminalExpression{
-            expr: Expression::Literal(LiteralValue{
-                lit: Literal::Boolean(false),
-            })
+    let stmt = Statement::Return(TerminalExpression {
+        expr: Expression::Literal(LiteralValue {
+            lit: Literal::Boolean(false),
+        }),
     });
     assert!(parser.parse("analyze false").unwrap() == stmt);
 }
 
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TerminalExpression<'a> {
-    pub expr: Expression<'a>
+    pub expr: Expression<'a>,
 }
 impl<'a> fmt::Display for TerminalExpression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -263,128 +263,134 @@ impl<'a> fmt::Display for TerminalExpression<'a> {
     }
 }
 
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VariableDeclaration<'a> {
     pub name: &'a str,
     pub kind: TypeData,
-    pub expr: Expression<'a>
+    pub expr: Expression<'a>,
 }
 
 /// Structures are top level arguments they exist
 /// outside of functions.
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Structures<'a> {
     Constant(ConstantDeclaration<'a>),
     Func(FunctionDeclaration<'a>),
     Analyze(AnalysisDeclaration<'a>),
 }
 impl<'a> fmt::Display for Structures<'a> {
-   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-       match self {
-           Structures::Analyze(ref ana) => write!(f, "analyze {};\n", ana.expr),
-           Structures::Constant(ref con) => write!(f,"const {}: {} = {};\n", con.name, con.kind, con.expr),
-           Structures::Func(ref func) => {
-               write!(f, "fn {}( ", func.name)?;
-               let last_arg_index = func.args.len()-1;
-               for (arg_index, arg) in func.args.iter().enumerate() {
-                   if arg_index == last_arg_index {
-                       write!(f,"{}: {}", arg.0, arg.1)?;
-                   } else {
-                       write!(f,"{}: {}, ", arg.0, arg.1)?;
-                   }
-               }
-               write!(f," ) -> {} {{\n {} }}\n", func.ret, func.body)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Structures::Analyze(ref ana) => write!(f, "analyze {};\n", ana.expr),
+            Structures::Constant(ref con) => {
+                write!(f, "const {}: {} = {};\n", con.name, con.kind, con.expr)
             }
-       }
-   }
+            Structures::Func(ref func) => {
+                write!(f, "fn {}( ", func.name)?;
+                let last_arg_index = func.args.len() - 1;
+                for (arg_index, arg) in func.args.iter().enumerate() {
+                    if arg_index == last_arg_index {
+                        write!(f, "{}: {}", arg.0, arg.1)?;
+                    } else {
+                        write!(f, "{}: {}, ", arg.0, arg.1)?;
+                    }
+                }
+                write!(f, " ) -> {} {{\n {} }}\n", func.ret, func.body)
+            }
+        }
+    }
 }
 impl<'a> Structures<'a> {
-
     pub fn to_func<'b>(s: &'b Structures<'a>) -> Option<&'b FunctionDeclaration<'a>> {
         match s {
             Structures::Func(func) => Some(func),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn to_const<'b>(s: &'b Structures<'a>) -> Option<&'b ConstantDeclaration<'a>> {
         match s {
             Structures::Constant(cons) => Some(cons),
-            _ => None
+            _ => None,
         }
     }
 
-    pub fn to_analysis<'b>(s: &'b Structures<'a>) -> Option<&'b AnalysisDeclaration<'a> > {
+    pub fn to_analysis<'b>(s: &'b Structures<'a>) -> Option<&'b AnalysisDeclaration<'a>> {
         match s {
             Structures::Analyze(cons) => Some(cons),
-            _ => None
+            _ => None,
         }
     }
 
     #[inline(always)]
-    pub fn new_const(name: &'a str, kind:TypeData, expr: Expression<'a>) -> Structures<'a> {
-        Structures::Constant(ConstantDeclaration {
-            name, kind, expr,
-        })
+    pub fn new_const(name: &'a str, kind: TypeData, expr: Expression<'a>) -> Structures<'a> {
+        Structures::Constant(ConstantDeclaration { name, kind, expr })
     }
 
     #[inline(always)]
     pub fn new_analysis(expr: Expression<'a>) -> Structures<'a> {
-        Structures::Analyze(AnalysisDeclaration {
-            expr,
-        })
+        Structures::Analyze(AnalysisDeclaration { expr })
     }
 
     #[inline(always)]
-    pub fn new_func(name: &'a str, args: Vec<(&'a str,&'a str,TypeData,&'a str)>, last_arg: Option<(&'a str, &'a str, TypeData)>, ret: TypeData, body: Statements<'a>) -> Structures<'a> {
-
+    pub fn new_func(
+        name: &'a str,
+        args: Vec<(&'a str, &'a str, TypeData, &'a str)>,
+        last_arg: Option<(&'a str, &'a str, TypeData)>,
+        ret: TypeData,
+        body: Statements<'a>,
+    ) -> Structures<'a> {
         #[inline(always)]
-        fn args_mapper<'a>(tup: (&'a str, &'a str, TypeData, &'a str)) -> (&'a str,TypeData) {
-            (tup.0,tup.2)
+        fn args_mapper<'a>(tup: (&'a str, &'a str, TypeData, &'a str)) -> (&'a str, TypeData) {
+            (tup.0, tup.2)
         }
         #[inline(always)]
-        fn last_arg_mapper<'a>(tup: (&'a str, &'a str, TypeData)) -> (&'a str,TypeData) {
-            (tup.0,tup.2)
+        fn last_arg_mapper<'a>(tup: (&'a str, &'a str, TypeData)) -> (&'a str, TypeData) {
+            (tup.0, tup.2)
         }
 
-        let args: Vec<(&'a str,TypeData)> = args.into_iter()
+        let args: Vec<(&'a str, TypeData)> = args
+            .into_iter()
             .map(args_mapper)
             .chain(last_arg.into_iter().map(last_arg_mapper))
             .collect();
         let args = args.into_boxed_slice();
-        Structures::Func(FunctionDeclaration{
-            name, args, ret, body,
+        Structures::Func(FunctionDeclaration {
+            name,
+            args,
+            ret,
+            body,
         })
     }
 }
 
 /// ConstantDeclaration is when a constant is declared globally.
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FunctionDeclaration<'a> {
     pub name: &'a str,
-    pub args: Box<[(&'a str,TypeData)]>,
+    pub args: Box<[(&'a str, TypeData)]>,
     pub ret: TypeData,
-    pub body: Statements<'a>
+    pub body: Statements<'a>,
 }
 impl<'a> fmt::Display for FunctionDeclaration<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "func {}(", self.name)?;
-        let last_arg = self.args.len()-1;
-        for (pos,arg) in self.args.iter().enumerate() {
-          if last_arg == pos {
-              write!(f, "{}: {}", arg.0, arg.1)?;
-          } else {
-              write!(f,"{}: {}, ", arg.0, arg.1)?;
-          }
-      }
-      write!(f, " )")
+        let last_arg = self.args.len() - 1;
+        for (pos, arg) in self.args.iter().enumerate() {
+            if last_arg == pos {
+                write!(f, "{}: {}", arg.0, arg.1)?;
+            } else {
+                write!(f, "{}: {}, ", arg.0, arg.1)?;
+            }
+        }
+        write!(f, " )")
     }
 }
 
 /// AnalysisDeclaraction is one of the last top level structures.
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AnalysisDeclaration<'a> {
-    pub expr: Expression<'a>
+    pub expr: Expression<'a>,
 }
 impl<'a> fmt::Display for AnalysisDeclaration<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -393,15 +399,15 @@ impl<'a> fmt::Display for AnalysisDeclaration<'a> {
 }
 
 /// ConstantDeclaration is when a constant is declared globally.
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstantDeclaration<'a> {
-   pub name: &'a str,
-   pub kind: TypeData,
-   pub expr: Expression<'a>,
+    pub name: &'a str,
+    pub kind: TypeData,
+    pub expr: Expression<'a>,
 }
 
 /// Expressions are expressions, things which can be tested.
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Expression<'a> {
     Func(FunctionInvocation<'a>),
     Literal(LiteralValue<'a>),
@@ -409,32 +415,28 @@ pub enum Expression<'a> {
     Variable(VariableReference<'a>),
 }
 impl<'a> AsRef<Expression<'a>> for Expression<'a> {
-    fn as_ref(&self) -> &Expression<'a> { self }
+    fn as_ref(&self) -> &Expression<'a> {
+        self
+    }
 }
 impl<'a> fmt::Display for Expression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expression::Func(ref func) => {
-                write!(f,"{}( ", func.name)?;
-                let last_arg = func.args.len()-1;
-                for (pos,arg) in func.args.iter().enumerate() {
+                write!(f, "{}( ", func.name)?;
+                let last_arg = func.args.len() - 1;
+                for (pos, arg) in func.args.iter().enumerate() {
                     if last_arg == pos {
                         write!(f, "{}", arg)?;
                     } else {
-                        write!(f,"{}, ", arg)?;
+                        write!(f, "{}, ", arg)?;
                     }
                 }
                 write!(f, " )")
-            },
-            Expression::Literal(ref lit) => {
-                write!(f, "{}", lit.lit)
-            },
-            Expression::Operation(ref op) => {
-                write!(f, "( {} {} {} )", op.left, op.op, op.right)
-            },
-            Expression::Variable(ref arg) => {
-                write!(f,"{}", arg.name)
             }
+            Expression::Literal(ref lit) => write!(f, "{}", lit.lit),
+            Expression::Operation(ref op) => write!(f, "( {} {} {} )", op.left, op.op, op.right),
+            Expression::Variable(ref arg) => write!(f, "{}", arg.name),
         }
     }
 }
@@ -445,36 +447,122 @@ fn test_expression_parsing() {
     let parser = ExprParser::new();
 
     // Literal Tests
-    assert!(parser.parse("15").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(15i64)}));
-    assert!(parser.parse("-35").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(-35i64)}));
-    assert!(parser.parse("-35").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(-35i64)}));
-    assert!( parser.parse("false").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Boolean(false) }));
-    assert!( parser.parse("true").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Boolean(true) }));
-    assert!( parser.parse("15").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(15i64) }));
-    assert!( parser.parse("-30").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::Number(-30i64) }));
-    assert!( parser.parse("%d{{ENV_VAR}}").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::EnvirNumber("ENV_VAR") }));
-    assert!( parser.parse("%b{{ENV_VAR}}").unwrap() == Expression::Literal(LiteralValue{ lit: Literal::EnvirBool("ENV_VAR") }));
+    assert!(
+        parser.parse("15").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Number(15i64)
+            })
+    );
+    assert!(
+        parser.parse("-35").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Number(-35i64)
+            })
+    );
+    assert!(
+        parser.parse("-35").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Number(-35i64)
+            })
+    );
+    assert!(
+        parser.parse("false").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Boolean(false)
+            })
+    );
+    assert!(
+        parser.parse("true").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Boolean(true)
+            })
+    );
+    assert!(
+        parser.parse("15").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Number(15i64)
+            })
+    );
+    assert!(
+        parser.parse("-30").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::Number(-30i64)
+            })
+    );
+    assert!(
+        parser.parse("%d{{ENV_VAR}}").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::EnvirNumber("ENV_VAR")
+            })
+    );
+    assert!(
+        parser.parse("%b{{ENV_VAR}}").unwrap()
+            == Expression::Literal(LiteralValue {
+                lit: Literal::EnvirBool("ENV_VAR")
+            })
+    );
 
     // Operation Tests
-    assert!(parser.parse("( false | true )").unwrap() == Expression::Operation(OperationResult{ left: Box::new(Expression::Literal(LiteralValue{ lit: Literal::Boolean(false)})), op: Operation::Or, right: Box::new(Expression::Literal(LiteralValue{ lit:Literal::Boolean(true)})) }));
-    assert!(parser.parse("( 2067 + %d{{INPUT_VALUE_TEST}} )").unwrap() == Expression::Operation(OperationResult{ left: Box::new(Expression::Literal(LiteralValue{ lit: Literal::Number(2067)})), op: Operation::Add, right: Box::new(Expression::Literal(LiteralValue{ lit:Literal::EnvirNumber("INPUT_VALUE_TEST")})) }));
+    assert!(
+        parser.parse("( false | true )").unwrap()
+            == Expression::Operation(OperationResult {
+                left: Box::new(Expression::Literal(LiteralValue {
+                    lit: Literal::Boolean(false)
+                })),
+                op: Operation::Or,
+                right: Box::new(Expression::Literal(LiteralValue {
+                    lit: Literal::Boolean(true)
+                }))
+            })
+    );
+    assert!(
+        parser.parse("( 2067 + %d{{INPUT_VALUE_TEST}} )").unwrap()
+            == Expression::Operation(OperationResult {
+                left: Box::new(Expression::Literal(LiteralValue {
+                    lit: Literal::Number(2067)
+                })),
+                op: Operation::Add,
+                right: Box::new(Expression::Literal(LiteralValue {
+                    lit: Literal::EnvirNumber("INPUT_VALUE_TEST")
+                }))
+            })
+    );
 
     // Variable Tests
-    assert!(parser.parse("helloWorld").unwrap() == Expression::Variable(VariableReference{ name: "helloWorld" }));
+    assert!(
+        parser.parse("helloWorld").unwrap()
+            == Expression::Variable(VariableReference { name: "helloWorld" })
+    );
 
     // function test
-    assert!(parser.parse("roll_d6(%d{{INPUT_VALUE}})").unwrap() == Expression::Func(FunctionInvocation{ name: "roll_d6", args: vec![Expression::Literal(LiteralValue{ lit: Literal::EnvirNumber("INPUT_VALUE") })].into_boxed_slice() }));
+    assert!(
+        parser.parse("roll_d6(%d{{INPUT_VALUE}})").unwrap()
+            == Expression::Func(FunctionInvocation {
+                name: "roll_d6",
+                args: vec![Expression::Literal(LiteralValue {
+                    lit: Literal::EnvirNumber("INPUT_VALUE")
+                })]
+                .into_boxed_slice()
+            })
+    );
 }
 impl<'a> Expression<'a> {
     #[inline(always)]
     pub fn new_literal(lit: Literal<'a>) -> Self {
-        Expression::Literal(LiteralValue{ lit })
+        Expression::Literal(LiteralValue { lit })
     }
 
     #[inline(always)]
-    pub fn new_function(name: &'a str, args: Vec<(Expression<'a>, &'a str)>, arg: Option<Expression<'a>>) -> Self {
-        #[inline(always)] fn tuple_mapper<'a>(arg: (Expression<'a>,&'a str)) -> Expression<'a> { arg.0 }
-        Expression::Func(FunctionInvocation{
+    pub fn new_function(
+        name: &'a str,
+        args: Vec<(Expression<'a>, &'a str)>,
+        arg: Option<Expression<'a>>,
+    ) -> Self {
+        #[inline(always)]
+        fn tuple_mapper<'a>(arg: (Expression<'a>, &'a str)) -> Expression<'a> {
+            arg.0
+        }
+        Expression::Func(FunctionInvocation {
             name,
             args: args.into_iter().map(tuple_mapper).chain(arg).collect(),
         })
@@ -482,12 +570,16 @@ impl<'a> Expression<'a> {
 
     #[inline(always)]
     pub fn new_var(name: &'a str) -> Self {
-        Expression::Variable(VariableReference{ name })
+        Expression::Variable(VariableReference { name })
     }
 
     #[inline(always)]
-    pub fn new_operation(left: Expression<'a>, op: Operation, right: Expression<'a>) -> Expression<'a> {
-        Expression::Operation(OperationResult{
+    pub fn new_operation(
+        left: Expression<'a>,
+        op: Operation,
+        right: Expression<'a>,
+    ) -> Expression<'a> {
+        Expression::Operation(OperationResult {
             left: Box::new(left),
             right: Box::new(right),
             op,
@@ -495,41 +587,39 @@ impl<'a> Expression<'a> {
     }
 }
 
-
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FunctionInvocation<'a> {
     pub name: &'a str,
     pub args: Box<[Expression<'a>]>,
 }
 impl<'a> fmt::Display for FunctionInvocation<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f,"{}( ", self.name)?;
-      let last_arg = self.args.len()-1;
-      for (pos,arg) in self.args.iter().enumerate() {
-          if last_arg == pos {
-              write!(f, "{}", arg)?;
-          } else {
-              write!(f,"{}, ", arg)?;
-          }
-      }
-      write!(f, " )")
+        write!(f, "{}( ", self.name)?;
+        let last_arg = self.args.len() - 1;
+        for (pos, arg) in self.args.iter().enumerate() {
+            if last_arg == pos {
+                write!(f, "{}", arg)?;
+            } else {
+                write!(f, "{}, ", arg)?;
+            }
+        }
+        write!(f, " )")
     }
 }
 
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LiteralValue<'a> {
-    pub lit: Literal<'a>
+    pub lit: Literal<'a>,
 }
 
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VariableReference<'a> {
     pub name: &'a str,
 }
 
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OperationResult<'a> {
     pub left: Box<Expression<'a>>,
     pub op: Operation,
     pub right: Box<Expression<'a>>,
 }
-

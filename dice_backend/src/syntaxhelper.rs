@@ -11,14 +11,14 @@ impl<'a> CharacterLookup<'a> {
         let mut line_char_start = 0usize;
         let mut buffer_index = 0usize;
         for (char_count, character) in arg.chars().enumerate() {
-            char_index.push(CharIndex{
+            char_index.push(CharIndex {
                 character: character.clone(),
                 byte_index: buffer_index.clone(),
                 char_index: char_count.clone(),
             });
             if character == '\n' {
                 // push our curent line
-                line_index.push(LineIndex{
+                line_index.push(LineIndex {
                     byte_start: line_byte_start.clone(),
                     char_start: line_char_start.clone(),
                     byte_end: buffer_index.clone(),
@@ -45,29 +45,24 @@ impl<'a> CharacterLookup<'a> {
         self.line_index
             .iter()
             .enumerate()
-            .filter(|(_,i)| i.char_start <= index && i.char_end >= index)
-            .map(|(i,_)| i)
+            .filter(|(_, i)| i.char_start <= index && i.char_end >= index)
+            .map(|(i, _)| i)
             .next()
             .unwrap_or(0)
     }
-
 
     pub fn get_line(&self, index: usize) -> &'a str {
         let line = self.get_line_number(index);
         let start = self.line_index[line].byte_start.clone();
         let end = self.line_index[line].byte_end.clone();
-        unsafe{
-            ::std::str::from_utf8_unchecked(&self.buffer.as_bytes()[start..end])
-        }
+        unsafe { ::std::str::from_utf8_unchecked(&self.buffer.as_bytes()[start..end]) }
     }
 
     /// get_span is used to return the text between character numbers start/end
     pub fn get_span(&self, start: usize, end: usize) -> &'a str {
         let start = self.char_index[start].byte_index.clone();
         let end = self.char_index[end].byte_index.clone();
-        unsafe{
-            ::std::str::from_utf8_unchecked(&self.buffer.as_bytes()[start..end])
-        }
+        unsafe { ::std::str::from_utf8_unchecked(&self.buffer.as_bytes()[start..end]) }
     }
 
     /// get_span_lines is used to return the "lines" between "start" and "end"
@@ -78,11 +73,8 @@ impl<'a> CharacterLookup<'a> {
         let start = self.line_index[line_start].byte_start.clone();
         let line_end = self.get_line_number(end);
         let end = self.line_index[line_end].byte_end.clone();
-        unsafe{
-            ::std::str::from_utf8_unchecked(&self.buffer.as_bytes()[start..end])
-        }
+        unsafe { ::std::str::from_utf8_unchecked(&self.buffer.as_bytes()[start..end]) }
     }
-
 }
 
 struct CharIndex {
