@@ -1,7 +1,16 @@
 use std::fmt;
 
+mod operation;
+pub use self::operation::{Operation};
+
+mod typedata;
+pub use self::typedata::{TypeData};
+
+mod literal;
+pub use self::literal::{Literal};
+
 use super::syntaxhelper::CharacterLookup;
-use lalrpop_util::ParseError;
+use super::lalrpop_util::ParseError;
 
 /// AbstractSyntaxTree is the top level of parse.
 ///
@@ -47,123 +56,7 @@ impl<'a> AbstractSyntaxTree<'a> {
     */
 }
 
-/// Literal values.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Literal<'a> {
-    Number(i64),
-    Boolean(bool),
-    EnvirBool(&'a str),
-    EnvirNumber(&'a str),
-}
-impl<'a> Literal<'a> {
-    pub fn get_type(&self) -> TypeData {
-        match self {
-            Literal::Number(_) | Literal::EnvirNumber(_) => TypeData::Int,
-            Literal::Boolean(_) | Literal::EnvirBool(_) => TypeData::Bool,
-        }
-    }
-}
-impl<'a> fmt::Display for Literal<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Literal::Number(ref num) => write!(f, "{}", *num),
-            Literal::Boolean(ref var) => {
-                if *var {
-                    write!(f, "true")
-                } else {
-                    write!(f, "false")
-                }
-            }
-            Literal::EnvirBool(ref name) => write!(f, "%b{{{{{}}}}}", name),
-            Literal::EnvirNumber(ref name) => write!(f, "%d{{{{{}}}}}", name),
-        }
-    }
-}
-#[test]
-fn test_literal_parsing() {
-    use super::value::LitParser;
 
-    let parser = LitParser::new();
-    assert!(parser.parse("false").unwrap() == Literal::Boolean(false));
-    assert!(parser.parse("true").unwrap() == Literal::Boolean(true));
-    assert!(parser.parse("15").unwrap() == Literal::Number(15i64));
-    assert!(parser.parse("-30").unwrap() == Literal::Number(-30i64));
-    assert!(parser.parse("%d{{ENV_VAR}}").unwrap() == Literal::EnvirNumber("ENV_VAR"));
-    assert!(parser.parse("%b{{ENV_VAR}}").unwrap() == Literal::EnvirBool("ENV_VAR"));
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TypeData {
-    Bool,
-    Int,
-    CollectionOfBool,
-    CollectionOfInt,
-}
-impl fmt::Display for TypeData {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TypeData::Bool => write!(f, "bool"),
-            TypeData::Int => write!(f, "int"),
-            TypeData::CollectionOfBool => write!(f, "vec<bool>"),
-            TypeData::CollectionOfInt => write!(f, "vec<int>"),
-        }
-    }
-}
-
-#[test]
-fn test_type_data_parsing() {
-    use super::value::KindParser;
-
-    let parser = KindParser::new();
-    assert!(parser.parse("bool").unwrap() == TypeData::Bool);
-    assert!(parser.parse("int").unwrap() == TypeData::Int);
-    assert!(parser.parse("vec<bool>").unwrap() == TypeData::CollectionOfBool);
-    assert!(parser.parse("vec<int>").unwrap() == TypeData::CollectionOfInt);
-}
-
-/// Operations are things we do to numbers
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Operation {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Or,
-    And,
-    Equal,
-    GreaterThan,
-    LessThan,
-    GreaterThanEqual,
-    LessThanEqual,
-}
-impl fmt::Display for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Operation::Add => write!(f, "+"),
-            Operation::Sub => write!(f, "-"),
-            Operation::Mul => write!(f, "*"),
-            Operation::Div => write!(f, "/"),
-            Operation::Or => write!(f, "|"),
-            Operation::And => write!(f, "&"),
-            Operation::Equal => write!(f, "=="),
-            Operation::GreaterThan => write!(f, ">"),
-            Operation::LessThan => write!(f, "<"),
-            Operation::GreaterThanEqual => write!(f, ">="),
-            Operation::LessThanEqual => write!(f, "<="),
-        }
-    }
-}
-
-#[test]
-fn test_operation_parsing() {
-    use super::value::OpParser;
-
-    let parser = OpParser::new();
-    assert!(parser.parse("+").unwrap() == Operation::Add);
-    assert!(parser.parse("-").unwrap() == Operation::Sub);
-    assert!(parser.parse("*").unwrap() == Operation::Mul);
-    assert!(parser.parse("/").unwrap() == Operation::Div);
-}
 
 /// Statements are a collection of operations
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -623,3 +516,4 @@ pub struct OperationResult<'a> {
     pub op: Operation,
     pub right: Box<Expression<'a>>,
 }
+

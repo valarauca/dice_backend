@@ -9,8 +9,8 @@ pub mod parser_output;
 mod value;
 
 mod formatter;
-//mod notacfg;
 mod namespace;
+mod cfgbuilder;
 mod seahasher;
 mod syntaxhelper;
 mod validator;

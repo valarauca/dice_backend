@@ -15,9 +15,9 @@ use super::seahasher::DefaultSeaHasher;
 /// It will attempt to ensure there are no collisions with
 /// the standard library, or the input program.
 pub struct Namespace<'a> {
-    pub constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
-    pub functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
-    pub analysis: Option<AnalysisDeclaration<'a>>,
+    constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
+    functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
+    analysis: Option<AnalysisDeclaration<'a>>,
 }
 impl<'a> Namespace<'a> {
     pub fn new<'b>(args: &'b [Structures<'a>]) -> Result<Namespace<'a>, String> {
