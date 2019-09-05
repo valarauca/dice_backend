@@ -55,5 +55,9 @@ pub use self::abstractsyntaxtree::AbstractSyntaxTree;
 
 /// GetType is used for lower level expressions it offers a method of returning typing data.
 pub trait GetType {
+    /// used to signal that `get_type` will always fail until namspacing is complete.
+    fn requires_namespace(&self) -> bool;
+
+    /// returns typing information.
     fn get_type(&self) -> Result<TypeData, String>;
 }

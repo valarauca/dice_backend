@@ -15,7 +15,6 @@ pub enum Operation {
     GreaterThanEqual,
     LessThanEqual,
 }
-
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

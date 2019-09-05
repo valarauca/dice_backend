@@ -4,7 +4,12 @@ use super::typedata::TypeData;
 
 use super::GetType;
 
-/// Literal values.
+/// Literal values fresh from the parser.
+///
+/// These represent constants like "15" or "true" or "-6".
+///
+/// There is some fancier types for loading things from the
+/// programs environment as well.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Literal<'a> {
     Number(i64),
@@ -13,6 +18,10 @@ pub enum Literal<'a> {
     EnvirNumber(&'a str),
 }
 impl<'a> GetType for Literal<'a> {
+    fn requires_namespace(&self) -> bool {
+        false
+    }
+
     fn get_type(&self) -> Result<TypeData, String> {
         match self {
             Literal::Number(_) | Literal::EnvirNumber(_) => Ok(TypeData::Int),
@@ -36,6 +45,7 @@ impl<'a> fmt::Display for Literal<'a> {
         }
     }
 }
+
 #[test]
 fn test_literal_parsing() {
     use super::super::value::LitParser;

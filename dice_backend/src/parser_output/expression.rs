@@ -5,7 +5,10 @@ use super::literal::Literal;
 use super::literalvalue::LiteralValue;
 use super::operation::Operation;
 use super::operationresult::OperationResult;
+use super::typedata::TypeData;
 use super::varreference::VariableReference;
+
+use super::GetType;
 
 /// Expressions are expressions, things which can be tested.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -18,6 +21,25 @@ pub enum Expression<'a> {
 impl<'a> AsRef<Expression<'a>> for Expression<'a> {
     fn as_ref(&self) -> &Expression<'a> {
         self
+    }
+}
+impl<'a> GetType for Expression<'a> {
+    fn requires_namespace(&self) -> bool {
+        match self {
+            Expression::Func(ref func) => func.requires_namespace(),
+            Expression::Literal(ref lit) => lit.requires_namespace(),
+            Expression::Operation(ref op) => op.requires_namespace(),
+            Expression::Variable(ref var) => var.requires_namespace(),
+        }
+    }
+
+    fn get_type(&self) -> Result<TypeData, String> {
+        match self {
+            Expression::Func(ref func) => func.get_type(),
+            Expression::Literal(ref lit) => lit.get_type(),
+            Expression::Operation(ref op) => op.get_type(),
+            Expression::Variable(ref var) => var.get_type(),
+        }
     }
 }
 impl<'a> fmt::Display for Expression<'a> {
