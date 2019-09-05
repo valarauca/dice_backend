@@ -28,4 +28,3 @@ fn test_type_data_parsing() {
     assert!(parser.parse("vec<bool>").unwrap() == TypeData::CollectionOfBool);
     assert!(parser.parse("vec<int>").unwrap() == TypeData::CollectionOfInt);
 }
-

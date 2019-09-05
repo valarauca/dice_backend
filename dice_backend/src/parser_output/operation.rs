@@ -1,4 +1,3 @@
-
 use std::fmt;
 
 /// Operations are things we do to numbers
@@ -45,4 +44,3 @@ fn test_operation_parsing() {
     assert!(parser.parse("*").unwrap() == Operation::Mul);
     assert!(parser.parse("/").unwrap() == Operation::Div);
 }
-

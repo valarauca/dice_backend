@@ -1,7 +1,8 @@
-
 use std::fmt;
 
-use super::typedata::{TypeData};
+use super::typedata::TypeData;
+
+use super::GetType;
 
 /// Literal values.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -11,11 +12,11 @@ pub enum Literal<'a> {
     EnvirBool(&'a str),
     EnvirNumber(&'a str),
 }
-impl<'a> Literal<'a> {
-    pub fn get_type(&self) -> TypeData {
+impl<'a> GetType for Literal<'a> {
+    fn get_type(&self) -> Result<TypeData, String> {
         match self {
-            Literal::Number(_) | Literal::EnvirNumber(_) => TypeData::Int,
-            Literal::Boolean(_) | Literal::EnvirBool(_) => TypeData::Bool,
+            Literal::Number(_) | Literal::EnvirNumber(_) => Ok(TypeData::Int),
+            Literal::Boolean(_) | Literal::EnvirBool(_) => Ok(TypeData::Bool),
         }
     }
 }
@@ -47,4 +48,3 @@ fn test_literal_parsing() {
     assert!(parser.parse("%d{{ENV_VAR}}").unwrap() == Literal::EnvirNumber("ENV_VAR"));
     assert!(parser.parse("%b{{ENV_VAR}}").unwrap() == Literal::EnvirBool("ENV_VAR"));
 }
-

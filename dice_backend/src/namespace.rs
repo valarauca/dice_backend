@@ -127,27 +127,28 @@ impl<'a> Namespace<'a> {
     }
 
     fn add_const<'b>(&mut self, arg: &'b Structures<'a>) -> Result<(), String> {
-        let lambda =
-            |arg: &'b ConstantDeclaration<'a>| -> Result<(), String> {
-                // check functions first b/c no side effects
-                match self.functions.get(arg.name) {
-                    Option::Some(is_a_func) => return Err(format!(
+        let lambda = |arg: &'b ConstantDeclaration<'a>| -> Result<(), String> {
+            // check functions first b/c no side effects
+            match self.functions.get(arg.name) {
+                Option::Some(is_a_func) => {
+                    return Err(format!(
                         "constant named=\"{}\" cannot be declared, function=\"{}\" uses that name",
                         is_a_func.name, is_a_func.name
-                    )),
-                    Option::None => {}
-                };
-                match self.constants.insert(arg.name, arg.clone()) {
-                    Option::Some(already_exists) => {
-                        return Err(format!(
-                            "const named=\"{}\" already exists",
-                            already_exists.name
-                        ))
-                    }
-                    Option::None => {}
-                };
-                Ok(())
+                    ))
+                }
+                Option::None => {}
             };
+            match self.constants.insert(arg.name, arg.clone()) {
+                Option::Some(already_exists) => {
+                    return Err(format!(
+                        "const named=\"{}\" already exists",
+                        already_exists.name
+                    ))
+                }
+                Option::None => {}
+            };
+            Ok(())
+        };
         Structures::to_const(arg)
             .into_iter()
             .map(lambda)
@@ -168,26 +169,27 @@ impl<'a> Namespace<'a> {
             .unwrap_or(Ok(()))
     }
     fn add_function<'b>(&mut self, arg: &'b Structures<'a>) -> Result<(), String> {
-        let lambda =
-            |arg: &'b FunctionDeclaration<'a>| -> Result<(), String> {
-                match self.constants.get(arg.name) {
-                    Option::Some(is_a_const) => return Err(format!(
+        let lambda = |arg: &'b FunctionDeclaration<'a>| -> Result<(), String> {
+            match self.constants.get(arg.name) {
+                Option::Some(is_a_const) => {
+                    return Err(format!(
                         "function named=\"{}\" cannot be declared, constant=\"{}\" uses that name",
                         is_a_const.name, is_a_const.name
-                    )),
-                    Option::None => {}
-                };
-                match self.functions.insert(arg.name, arg.clone()) {
-                    Option::Some(already_exists) => {
-                        return Err(format!(
-                            "function named=\"{}\" already exists",
-                            already_exists.name
-                        ))
-                    }
-                    Option::None => {}
-                };
-                Ok(())
+                    ))
+                }
+                Option::None => {}
             };
+            match self.functions.insert(arg.name, arg.clone()) {
+                Option::Some(already_exists) => {
+                    return Err(format!(
+                        "function named=\"{}\" already exists",
+                        already_exists.name
+                    ))
+                }
+                Option::None => {}
+            };
+            Ok(())
+        };
         Structures::to_func(arg)
             .into_iter()
             .map(lambda)
@@ -355,14 +357,12 @@ impl<'a, 'b> BasicBlock<'a, 'b> {
         match expr {
             Expression::Literal(ref lit) => Ok(BlockExpression::ConstantValue(
                 lit.lit.clone(),
-                lit.lit.get_type(),
+                lit.lit.get_type()?,
             )),
             Expression::Variable(ref var) => match self.get_constant_type(var.name) {
                 Option::Some(kind) => Ok(BlockExpression::ExternalConstant(var.name, kind)),
                 Option::None => match self.get_var_type(var.name) {
-                    Option::Some(kind) => {
-                       Ok(BlockExpression::Var(var.name, kind))
-                    },
+                    Option::Some(kind) => Ok(BlockExpression::Var(var.name, kind)),
                     Option::None => Err(format!(
                         "variable '{}' is referenced but not defined",
                         var.name
@@ -413,4 +413,3 @@ impl<'a, 'b> BasicBlock<'a, 'b> {
         self.vars.get(name).map(|var| var.kind.clone())
     }
 }
-
