@@ -1,14 +1,14 @@
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::mem::replace;
 
-use std::collections::{HashMap};
-use std::hash::{Hash,Hasher};
-use std::mem::{replace};
+use super::super::parser_output::{
+    Expression, GetType, Statement, Statements, TerminalExpression, TypeData, VariableDeclaration,
+};
+use super::super::seahasher::DefaultSeaHasher;
 
-use super::super::parser_output::{VariableDeclaration,TerminalExpression,Expression,TypeData,GetType,Statement,Statements};
-use super::super::seahasher::{DefaultSeaHasher};
-
-use super::namespace::{Namespace};
-use super::blockexpression::{BlockExpression};
-
+use super::blockexpression::BlockExpression;
+use super::namespace::Namespace;
 
 /// BasicBlock is in essence a function's body.
 /// It can also be used for control structures
@@ -145,5 +145,3 @@ impl<'a, 'b> BasicBlock<'a, 'b> {
         self.vars.get(name).map(|var| var.kind.clone())
     }
 }
-
-

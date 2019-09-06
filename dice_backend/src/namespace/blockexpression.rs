@@ -1,10 +1,9 @@
-
-use std::fmt;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
-use super::super::parser_output::{Literal,TypeData,Expression,Operation,GetType};
+use super::super::parser_output::{Expression, GetType, Literal, Operation, TypeData};
 use super::super::seahash::SeaHasher;
 
 /// BlockExpression is the result of expresion lowering.
@@ -25,11 +24,13 @@ pub enum BlockExpression<'a> {
 impl<'a> fmt::Display for BlockExpression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BlockExpression::ConstantValue(ref lit,_) => write!(f, "{}", lit),
-            BlockExpression::ExternalConstant(ref name,_) => write!(f, "{}", name),
-            BlockExpression::Var(ref name,_) => write!(f, "{}", name),
-            BlockExpression::Op(ref left, ref op, ref right) => write!(f, "( {} {} {} )", left, op, right),
-            BlockExpression::Func(ref name, ref args,_) => {
+            BlockExpression::ConstantValue(ref lit, _) => write!(f, "{}", lit),
+            BlockExpression::ExternalConstant(ref name, _) => write!(f, "{}", name),
+            BlockExpression::Var(ref name, _) => write!(f, "{}", name),
+            BlockExpression::Op(ref left, ref op, ref right) => {
+                write!(f, "( {} {} {} )", left, op, right)
+            }
+            BlockExpression::Func(ref name, ref args, _) => {
                 write!(f, "{}(", name)?;
                 let last_arg = args.len() - 1;
                 for (index, arg) in args.iter().enumerate() {
@@ -39,14 +40,15 @@ impl<'a> fmt::Display for BlockExpression<'a> {
                         write!(f, "{},", arg)?;
                     }
                 }
-                write!(f,")")
-            },
+                write!(f, ")")
+            }
         }
     }
 }
 impl<'a> GetType for BlockExpression<'a> {
-
-    fn requires_namespace(&self) -> bool { false }
+    fn requires_namespace(&self) -> bool {
+        false
+    }
 
     /// resolving the typing data for the block expression
     fn get_type(&self) -> Result<TypeData, String> {
@@ -105,4 +107,3 @@ impl<'a> GetType for BlockExpression<'a> {
         }
     }
 }
-

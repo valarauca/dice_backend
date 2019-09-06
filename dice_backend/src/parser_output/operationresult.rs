@@ -18,7 +18,6 @@ impl<'a> fmt::Display for OperationResult<'a> {
     }
 }
 impl<'a> GetType for OperationResult<'a> {
-
     fn requires_namespace(&self) -> bool {
         self.left.requires_namespace() || self.right.requires_namespace()
     }

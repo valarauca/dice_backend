@@ -1,10 +1,11 @@
-
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
+use super::super::parser_output::{
+    AnalysisDeclaration, ConstantDeclaration, FunctionDeclaration, Statements, Structures, TypeData,
+};
 use super::super::seahasher::DefaultSeaHasher;
-use super::super::parser_output::{ConstantDeclaration,FunctionDeclaration, AnalysisDeclaration,Structures,Statements,TypeData};
 
 /// Namespace represents the pre-parsing of the of the AST.
 /// It will attempt to ensure there are no collisions with
@@ -15,7 +16,6 @@ pub struct Namespace<'a> {
     analysis: Option<AnalysisDeclaration<'a>>,
 }
 impl<'a> Namespace<'a> {
-
     /// new constructs an instance of namespace.
     pub fn new<'b>(args: &'b [Structures<'a>]) -> Result<Namespace<'a>, String> {
         let mut analysis = Namespace {
@@ -194,4 +194,3 @@ impl<'a> Namespace<'a> {
             .unwrap_or(Ok(()))
     }
 }
-
