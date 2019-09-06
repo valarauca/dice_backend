@@ -76,6 +76,10 @@ impl<'a> BasicBlock<'a> {
         Ok(bb)
     }
 
+    pub fn get_return<'b>(&'b self) -> &'b Option<BlockExpression<'a>> {
+        &self.populated_return_expresion
+    }
+
     fn add_statement(
         &mut self,
         func: &FunctionDeclaration<'a>,

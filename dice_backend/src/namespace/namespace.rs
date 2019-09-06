@@ -79,6 +79,10 @@ impl<'a> Namespace<'a> {
         self.get_constant(arg).is_some() || self.get_function(arg).is_some()
     }
 
+    pub fn get_own_block<'b>(&'b self) -> &'b Option<BasicBlock<'a>> {
+        &self.owndata
+    }
+
     fn populate_std(&mut self) {
         self.functions.insert(
             "roll_d6",

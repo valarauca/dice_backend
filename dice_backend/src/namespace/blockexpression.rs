@@ -28,6 +28,11 @@ pub enum BlockExpression<'a> {
     ),
 }
 impl<'a> BlockExpression<'a> {
+
+    pub fn resolve_deps(&self, n: &Namespace<'a>) -> Result<Vec<BlockExpression<'a>>,String> {
+        match self {
+        }
+    }
     /// constructs a new constant value from the block expression
     #[inline(always)]
     pub fn lit(arg: &Literal<'a>) -> Result<BlockExpression<'a>, String> {
