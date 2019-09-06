@@ -21,18 +21,17 @@ use super::namespace::Namespace;
 pub struct BasicBlock<'a> {
     vars: HashMap<&'a str, VariableDeclaration<'a>, DefaultSeaHasher>,
     populated_vars: HashMap<&'a str, BlockExpression<'a>, DefaultSeaHasher>,
-    return_expression: Option<TerminalExpression<'a>>,
     populated_return_expresion: Option<BlockExpression<'a>>,
 }
 impl<'a> BasicBlock<'a> {
-    pub fn new(
+    /// new constructs a basic block from a function's declaration within a namespace
+    pub fn from_func(
         names: &Namespace<'a>,
         func: &FunctionDeclaration<'a>,
     ) -> Result<BasicBlock<'a>, String> {
         let mut bb = BasicBlock {
             vars: HashMap::default(),
             populated_vars: HashMap::default(),
-            return_expression: None,
             populated_return_expresion: None,
         };
         for (index, (name, kind)) in func.args.iter().enumerate() {
@@ -41,10 +40,39 @@ impl<'a> BasicBlock<'a> {
         for stmt in func.body.data.iter() {
             bb.add_statement(func, names, stmt)?;
         }
-        if bb.return_expression.is_none() {
+        if bb.populated_return_expresion.is_none() {
             // TODO bad error
             return Err(format!("function has no return statement"));
         }
+        Ok(bb)
+    }
+
+    /// handles only converting the root expression not individual functions
+    pub fn from_root(names: &Namespace<'a>) -> Result<BasicBlock<'a>, String> {
+        let mut bb = BasicBlock {
+            vars: HashMap::default(),
+            populated_vars: HashMap::default(),
+            populated_return_expresion: None,
+        };
+        for (name, value) in names.get_all_constants() {
+            let expr = bb.convert_expression(names, &value.expr)?;
+            let expr_type = expr.get_type()?;
+            if value.kind != expr_type {
+                return Err(format!("constant declaration: '{}' is in error. Expression: '{}' yeilds type: '{}' but we are binding type: '{}'", value, &value.expr, expr_type, value.kind));
+            }
+            bb.populated_vars.insert(name, expr);
+        }
+
+        let analysis = match names.get_analysis() {
+            Option::Some(analysis) => analysis,
+            Option::None => {
+                return Err(format!(
+                    "program contains no analysis directive. How do we report?"
+                ));
+            }
+        };
+        let expr = bb.convert_expression(names, &analysis.expr)?;
+        replace(&mut bb.populated_return_expresion, Some(expr));
         Ok(bb)
     }
 
@@ -166,8 +194,15 @@ impl<'a> BasicBlock<'a> {
         n: &Namespace<'a>,
         term: &TerminalExpression<'a>,
     ) -> Result<(), String> {
-        // guard to avoid multiple returns
-        match replace(&mut self.return_expression, Some(term.clone())) {
+        // type check against function declaration
+        let return_expr = self.convert_expression(n, &term.expr)?;
+        let return_type = return_expr.get_type()?;
+        if return_type != f.ret {
+            return Err(format!("return expression: 'return {};' has type of '{}' while the function we are returning: '{}' expects: '{}'", term.expr, return_type, f, f.ret));
+        }
+
+        // update return field
+        match replace(&mut self.populated_return_expresion, Some(return_expr)) {
             Option::None => {}
             Option::Some(old_term) => {
                 return Err(format!(
@@ -176,16 +211,6 @@ impl<'a> BasicBlock<'a> {
                 ))
             }
         };
-
-        // type check against function declaration
-        let return_expr = self.convert_expression(n, &term.expr)?;
-        let return_type = return_expr.get_type()?;
-        if return_type != f.ret {
-            return Err(format!("return expression: 'return {};' has type of '{}' while the function we are returning: '{}' expects: '{}'", term.expr, return_type, f, f.ret));
-        }
-
-        // update one more field
-        replace(&mut self.populated_return_expresion, Some(return_expr));
         Ok(())
     }
 

@@ -1,3 +1,4 @@
+use std::collections::hash_map::Iter;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
@@ -16,6 +17,7 @@ pub struct Namespace<'a> {
     constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
     functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
     function_body: HashMap<&'a str, BasicBlock<'a>, DefaultSeaHasher>,
+    owndata: Option<BasicBlock<'a>>,
     analysis: Option<AnalysisDeclaration<'a>>,
 }
 impl<'a> Namespace<'a> {
@@ -25,6 +27,7 @@ impl<'a> Namespace<'a> {
             constants: HashMap::default(),
             functions: HashMap::default(),
             function_body: HashMap::default(),
+            owndata: None,
             analysis: None,
         };
         analysis.populate_std();
@@ -37,9 +40,11 @@ impl<'a> Namespace<'a> {
             analysis.add_analysis(item)?;
         }
         for (name, func) in analysis.functions.iter() {
-            let bb = BasicBlock::new(&analysis, func)?;
+            let bb = BasicBlock::from_func(&analysis, func)?;
             analysis.function_body.insert(name, bb);
         }
+        let rootblock = Some(BasicBlock::from_root(&analysis)?);
+        analysis.owndata = rootblock;
         Ok(analysis)
     }
 
@@ -54,6 +59,17 @@ impl<'a> Namespace<'a> {
         self.constants.get(arg)
     }
 
+    /// return an iterator over all constants
+    pub fn get_all_constants<'b>(&'b self) -> Iter<'b, &'a str, ConstantDeclaration<'a>> {
+        self.constants.iter()
+    }
+
+    /// returns the analysis for this program
+    pub fn get_analysis<'b>(&'b self) -> &'b Option<AnalysisDeclaration<'a>> {
+        &self.analysis
+    }
+
+    /// returns the type for a constatn
     pub fn get_constant_type(&self, name: &str) -> Option<TypeData> {
         self.constants.get(name).map(|constant| constant.kind)
     }
