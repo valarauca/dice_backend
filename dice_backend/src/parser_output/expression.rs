@@ -18,11 +18,6 @@ pub enum Expression<'a> {
     Operation(OperationResult<'a>),
     Variable(VariableReference<'a>),
 }
-impl<'a> AsRef<Expression<'a>> for Expression<'a> {
-    fn as_ref(&self) -> &Expression<'a> {
-        self
-    }
-}
 impl<'a> GetType for Expression<'a> {
     fn requires_namespace(&self) -> bool {
         match self {
