@@ -3,8 +3,12 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
-use super::super::parser_output::{Expression, GetType, Literal, Operation, TypeData};
+use super::super::parser_output::{
+    Expression, FunctionInvocation, GetType, Literal, Operation, TypeData,
+};
 use super::super::seahash::SeaHasher;
+
+use super::namespace::Namespace;
 
 /// BlockExpression is the result of expresion lowering.
 /// when preformed it. Block Expressions, unlike normal
@@ -20,7 +24,97 @@ pub enum BlockExpression<'a> {
         Box<BlockExpression<'a>>,
         Operation,
         Box<BlockExpression<'a>>,
+        TypeData,
     ),
+}
+impl<'a> BlockExpression<'a> {
+    /// constructs a new constant value from the block expression
+    #[inline(always)]
+    pub fn lit(arg: &Literal<'a>) -> Result<BlockExpression<'a>, String> {
+        Ok(BlockExpression::ConstantValue(arg.clone(), arg.get_type()?))
+    }
+
+    /// constructs a new Var value from the arguments
+    #[inline(always)]
+    pub fn var(arg: &'a str, kind: TypeData) -> Result<BlockExpression<'a>, String> {
+        Ok(BlockExpression::Var(arg, kind))
+    }
+
+    /// func builds a new instance of the function variant
+    #[inline(always)]
+    pub fn func(
+        name: &'a str,
+        args: Vec<BlockExpression<'a>>,
+        ret: TypeData,
+    ) -> Result<BlockExpression<'a>, String> {
+        Ok(BlockExpression::Func(name, args.into_boxed_slice(), ret))
+    }
+
+    pub fn op(
+        left: BlockExpression<'a>,
+        op: Operation,
+        right: BlockExpression<'a>,
+    ) -> Result<BlockExpression<'a>, String> {
+        let typedata = match op {
+            Operation::Sub | Operation::Mul | Operation::Div | Operation::Add => {
+                match (left.get_type()?, right.get_type()?) {
+                    (TypeData::Int, TypeData::Int) => TypeData::Int,
+                    (TypeData::Int, TypeData::CollectionOfInt) => TypeData::CollectionOfInt,
+                    (TypeData::CollectionOfInt, TypeData::Int) => TypeData::Int,
+                    (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
+                        TypeData::CollectionOfInt
+                    }
+                    (left_type, right_type) => {
+                        return Err(format!(
+                            "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
+                            left, op, right, left_type, op, right_type
+                        ))
+                    }
+                }
+            }
+            Operation::Equal
+            | Operation::GreaterThan
+            | Operation::LessThan
+            | Operation::GreaterThanEqual
+            | Operation::LessThanEqual => match (left.get_type()?, right.get_type()?) {
+                (TypeData::Int, TypeData::Int) => TypeData::Bool,
+                (TypeData::Int, TypeData::CollectionOfInt) => TypeData::CollectionOfBool,
+                (TypeData::CollectionOfInt, TypeData::Int) => TypeData::CollectionOfBool,
+                (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
+                    TypeData::CollectionOfBool
+                }
+                (left_type, right_type) => {
+                    return Err(format!(
+                        "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
+                        left, op, right, left_type, op, right_type
+                    ))
+                }
+            },
+            Operation::Or | Operation::And => {
+                match (left.get_type()?, right.get_type()?) {
+                    (TypeData::Bool, TypeData::Bool) => TypeData::Bool,
+                    (TypeData::Bool, TypeData::CollectionOfBool) => TypeData::CollectionOfBool,
+                    (TypeData::CollectionOfBool, TypeData::Bool) => TypeData::CollectionOfBool,
+                    (TypeData::CollectionOfBool, TypeData::CollectionOfBool) => {
+                        TypeData::CollectionOfBool
+                    }
+                    // TODO this sucks
+                    (left_type, right_type) => {
+                        return Err(format!(
+                            "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
+                            left, op, right, left_type, op, right_type
+                        ))
+                    }
+                }
+            }
+        };
+        Ok(BlockExpression::Op(
+            Box::new(left),
+            op,
+            Box::new(right),
+            typedata,
+        ))
+    }
 }
 impl<'a> fmt::Display for BlockExpression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -29,7 +123,7 @@ impl<'a> fmt::Display for BlockExpression<'a> {
             BlockExpression::ExternalConstant(ref name, _) => write!(f, "{}", name),
             BlockExpression::FunctionArg(ref name, _) => write!(f, "{}", name),
             BlockExpression::Var(ref name, _) => write!(f, "{}", name),
-            BlockExpression::Op(ref left, ref op, ref right) => {
+            BlockExpression::Op(ref left, ref op, ref right, _) => {
                 write!(f, "( {} {} {} )", left, op, right)
             }
             BlockExpression::Func(ref name, ref args, _) => {
@@ -60,53 +154,7 @@ impl<'a> GetType for BlockExpression<'a> {
             BlockExpression::FunctionArg(_, kind) => Ok(kind.clone()),
             BlockExpression::Func(_, _, kind) => Ok(kind.clone()),
             BlockExpression::Var(_, kind) => Ok(kind.clone()),
-            BlockExpression::Op(ref left, op, ref right) => match op {
-                Operation::Sub | Operation::Mul | Operation::Div | Operation::Add => {
-                    match (left.get_type()?, right.get_type()?) {
-                        (TypeData::Int, TypeData::Int) => Ok(TypeData::Int),
-                        (TypeData::Int, TypeData::CollectionOfInt) => Ok(TypeData::CollectionOfInt),
-                        (TypeData::CollectionOfInt, TypeData::Int) => Ok(TypeData::Int),
-                        (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
-                            Ok(TypeData::CollectionOfInt)
-                        }
-                        // TODO this sucks
-                        (left_type, right_type) => Err(format!(
-                            "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
-                            left, op, right, left_type, op, right_type
-                        )),
-                    }
-                }
-                Operation::Equal
-                | Operation::GreaterThan
-                | Operation::LessThan
-                | Operation::GreaterThanEqual
-                | Operation::LessThanEqual => match (left.get_type()?, right.get_type()?) {
-                    (TypeData::Int, TypeData::Int) => Ok(TypeData::Bool),
-                    (TypeData::Int, TypeData::CollectionOfInt) => Ok(TypeData::CollectionOfBool),
-                    (TypeData::CollectionOfInt, TypeData::Int) => Ok(TypeData::CollectionOfBool),
-                    (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
-                        Ok(TypeData::CollectionOfBool)
-                    }
-                    // TODO this sucks
-                    (left, right) => Err(format!(
-                        "type error. Expression on ({} {} {}) is illegal",
-                        left, op, right
-                    )),
-                },
-                Operation::Or | Operation::And => match (left.get_type()?, right.get_type()?) {
-                    (TypeData::Bool, TypeData::Bool) => Ok(TypeData::Bool),
-                    (TypeData::Bool, TypeData::CollectionOfBool) => Ok(TypeData::CollectionOfBool),
-                    (TypeData::CollectionOfBool, TypeData::Bool) => Ok(TypeData::CollectionOfBool),
-                    (TypeData::CollectionOfBool, TypeData::CollectionOfBool) => {
-                        Ok(TypeData::CollectionOfBool)
-                    }
-                    // TODO this sucks
-                    (left, right) => Err(format!(
-                        "type error. Expression on ({} {} {}) is illegal",
-                        left, op, right
-                    )),
-                },
-            },
+            BlockExpression::Op(_, _, _, kind) => Ok(kind.clone()),
         }
     }
 }

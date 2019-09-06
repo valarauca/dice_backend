@@ -71,48 +71,47 @@ impl<'a> BasicBlock<'a> {
         expr: &Expression<'a>,
     ) -> Result<BlockExpression<'a>, String> {
         match expr {
-            Expression::Literal(ref lit) => Ok(BlockExpression::ConstantValue(
-                lit.lit.clone(),
-                lit.lit.get_type()?,
-            )),
+            Expression::Literal(ref lit) => Ok(BlockExpression::lit(&lit.lit)?),
             Expression::Variable(ref var) => match self.get_var_type(n, var.name) {
-                Option::Some(kind) => Ok(BlockExpression::Var(var.name, kind)),
+                Option::Some(kind) => Ok(BlockExpression::var(var.name, kind)?),
                 Option::None => Err(format!(
                     "variable '{}' is referenced but not defined",
                     var.name
                 )),
             },
-            Expression::Func(ref func) => match n.get_function(func.name) {
-                Option::None => Err(format!(
-                    "function invocation: '{}' cannot be made function not found",
-                    func.name
-                )),
-                Option::Some(ref func_data) => {
-                    if func_data.args.len() == func.args.len() {
-                        let mut arg_vec = Vec::with_capacity(func.args.len());
-                        for (index, arg) in func.args.iter().enumerate() {
-                            let block_expr = self.convert_expression(n, arg)?;
-                            let expected_type = func_data.args[index].1.clone();
-                            let found_type = block_expr.get_type()?;
-                            if found_type != expected_type {
-                                return Err(format!("expression: '{}' has an error the {} argument to function '{}' is of the incorrect type. Expected type:{} Found type:{}", expr, index, func_data, expected_type, found_type));
-                            }
-                            arg_vec.push(block_expr);
-                        }
-                        Ok(BlockExpression::Func(
-                            func.name,
-                            arg_vec.into_boxed_slice(),
-                            func_data.ret,
-                        ))
-                    } else {
-                        Err(format!("function invocation: '{}' has the name of function: '{}' but incorrect argument count. Expected: {} Found: {}", func, func_data, func_data.args.len(), func.args.len()))
+            Expression::Func(ref func) => {
+                // lookup function in namespace
+                let func_data = match n.get_function(func.name) {
+                    Option::None => {
+                        return Err(format!("function invocation: '{}' cannot be resolved. no function of that name is defined", func));
                     }
+                    Option::Some(func_data) => func_data,
+                };
+                // ensure the call provides enough arguments
+                let declared_args_count: usize = func_data.args.len();
+                let referenced_args_count: usize = func.args.len();
+                if declared_args_count != referenced_args_count {
+                    return Err(format!("function invocation: '{}' has the name of function: '{}' but incorrect argument count. Expected: {} Found: {}", func, func_data, declared_args_count, referenced_args_count));
                 }
-            },
+
+                // iterate over the arguments & convert their expressions recursively
+                // atttempt to perform type checking recursively as well.
+                let mut arg_vec = Vec::with_capacity(func.args.len());
+                for (index, arg) in func.args.iter().enumerate() {
+                    let block_expr = self.convert_expression(n, arg)?;
+                    let expected_type = func_data.args[index].1.clone();
+                    let found_type = block_expr.get_type()?;
+                    if found_type != expected_type {
+                        return Err(format!("expression: '{}' has an error the {} argument to function '{}' is of the incorrect type. Expected type:{} Found type:{}", expr, index, func_data, expected_type, found_type));
+                    }
+                    arg_vec.push(block_expr);
+                }
+                Ok(BlockExpression::func(func.name, arg_vec, func_data.ret)?)
+            }
             Expression::Operation(ref op) => {
-                let left = Box::new(self.convert_expression(n, op.left.as_ref())?);
-                let right = Box::new(self.convert_expression(n, op.right.as_ref())?);
-                Ok(BlockExpression::Op(left, op.op.clone(), right))
+                let left = self.convert_expression(n, op.left.as_ref())?;
+                let right = self.convert_expression(n, op.right.as_ref())?;
+                Ok(BlockExpression::op(left, op.op.clone(), right)?)
             }
         }
     }

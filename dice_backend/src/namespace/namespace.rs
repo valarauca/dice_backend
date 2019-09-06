@@ -7,12 +7,15 @@ use super::super::parser_output::{
 };
 use super::super::seahasher::DefaultSeaHasher;
 
+use super::block::BasicBlock;
+
 /// Namespace represents the pre-parsing of the of the AST.
 /// It will attempt to ensure there are no collisions with
 /// the standard library, or the input program.
 pub struct Namespace<'a> {
     constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
     functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
+    function_body: HashMap<&'a str, BasicBlock<'a>, DefaultSeaHasher>,
     analysis: Option<AnalysisDeclaration<'a>>,
 }
 impl<'a> Namespace<'a> {
@@ -21,6 +24,7 @@ impl<'a> Namespace<'a> {
         let mut analysis = Namespace {
             constants: HashMap::default(),
             functions: HashMap::default(),
+            function_body: HashMap::default(),
             analysis: None,
         };
         analysis.populate_std();
@@ -31,6 +35,10 @@ impl<'a> Namespace<'a> {
             analysis.add_const(item)?;
             analysis.add_function(item)?;
             analysis.add_analysis(item)?;
+        }
+        for (name, func) in analysis.functions.iter() {
+            let bb = BasicBlock::new(&analysis, func)?;
+            analysis.function_body.insert(name, bb);
         }
         Ok(analysis)
     }
