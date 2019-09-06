@@ -46,6 +46,10 @@ impl<'a> Namespace<'a> {
         self.constants.get(arg)
     }
 
+    pub fn get_constant_type(&self, name: &str) -> Option<TypeData> {
+        self.constants.get(name).map(|constant| constant.kind)
+    }
+
     /// checks if this name already exists
     pub fn is_name_defined(&self, arg: &str) -> bool {
         self.get_constant(arg).is_some() || self.get_function(arg).is_some()
