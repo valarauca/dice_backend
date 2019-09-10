@@ -1,4 +1,4 @@
-#![allow(unused_imports)]
+#![allow(unused_imports,dead_code,unused_variables)]
 extern crate clap;
 extern crate lalrpop_util;
 extern crate regex;

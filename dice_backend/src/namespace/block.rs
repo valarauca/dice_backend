@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Iter;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
@@ -78,6 +79,10 @@ impl<'a> BasicBlock<'a> {
 
     pub fn get_return<'b>(&'b self) -> &'b Option<BlockExpression<'a>> {
         &self.populated_return_expresion
+    }
+
+    pub fn get_vars<'b>(&'b self) -> Iter<'b,&'a str, BlockExpression<'a>> {
+          self.populated_vars.iter()
     }
 
     fn add_statement(
