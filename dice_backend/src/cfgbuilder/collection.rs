@@ -1,7 +1,7 @@
 
 use std::collections::{BTreeMap,HashMap};
 
-use super::super::namespace::{BlockExpression,BasicBlock};
+use super::super::namespace::{BlockExpression,BasicBlock,Namespace};
 use super::super::seahasher::DefaultSeaHasher;
 
 use super::expression::{HashedExpression};
@@ -30,6 +30,24 @@ impl<'a> ExpressionCollection<'a> {
         match block.get_return() {
             &Option::None => unreachable!(),
             &Option::Some(ref expr) => {
+                collection.ret = Some(collection.insert_block(expr));
+            }
+        };
+        collection
+    }
+
+    pub fn from_namespace(n: &Namespace<'a>) -> Self {
+        let mut collection = ExpressionCollection {
+            data: BTreeMap::default(),
+            vars: HashMap::default(),
+            ret: None,
+        };
+        for (name, expr) in n.get_own_block().into_iter().flat_map(|b| b.get_vars()) {
+            collection.insert_vars(name, expr); 
+        }
+        match n.get_own_block().into_iter().flat_map(|b| b.get_return()).next() {
+            Option::None => unreachable!(),
+            Option::Some(ref expr) => {
                 collection.ret = Some(collection.insert_block(expr));
             }
         };
