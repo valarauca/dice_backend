@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::hash_map::Iter;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
@@ -81,8 +81,8 @@ impl<'a> BasicBlock<'a> {
         &self.populated_return_expresion
     }
 
-    pub fn get_vars<'b>(&'b self) -> Iter<'b,&'a str, BlockExpression<'a>> {
-          self.populated_vars.iter()
+    pub fn get_vars<'b>(&'b self) -> Iter<'b, &'a str, BlockExpression<'a>> {
+        self.populated_vars.iter()
     }
 
     fn add_statement(
@@ -217,27 +217,37 @@ impl<'a> BasicBlock<'a> {
     }
 
     fn is_name_defined(&self, n: &Namespace<'a>, name: &str) -> bool {
-        n.is_name_defined(name)
-            || self.populated_vars.get(name).is_some()
+        n.is_name_defined(name) || self.populated_vars.get(name).is_some()
     }
 
     // convert_expr_var_name handles the messiness of determining _what kind of variable_
     // is being referenced.
-    fn convert_expr_var_name(&self, namespace: &Namespace<'a>, name: &'a str) -> Result<BlockExpression<'a>,String> {
+    fn convert_expr_var_name(
+        &self,
+        namespace: &Namespace<'a>,
+        name: &'a str,
+    ) -> Result<BlockExpression<'a>, String> {
         match namespace.get_constant(name) {
-            Option::None => { },
+            Option::None => {}
             Option::Some(ref constant_dec) => {
-                return Ok(BlockExpression::ExternalConstant(name, constant_dec.kind.clone()));
+                return Ok(BlockExpression::ExternalConstant(
+                    name,
+                    constant_dec.kind.clone(),
+                ));
             }
         };
         match self.populated_vars.get(name) {
-            Option::Some(&BlockExpression::FunctionArg(_,ref index, ref kind)) => {
-                return Ok(BlockExpression::FunctionArg(name, index.clone(), kind.clone()));
-            },
+            Option::Some(&BlockExpression::FunctionArg(_, ref index, ref kind)) => {
+                return Ok(BlockExpression::FunctionArg(
+                    name,
+                    index.clone(),
+                    kind.clone(),
+                ));
+            }
             Option::Some(ref block) => {
                 return Ok(BlockExpression::Var(name, block.get_type()?));
-            },
-            Option::None => { },
+            }
+            Option::None => {}
         };
         Err(format!("variable name:'{}' is not defined", name))
     }

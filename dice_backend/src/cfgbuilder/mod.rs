@@ -1,7 +1,6 @@
-
 mod expression;
-pub use self::expression::{HashedExpression};
+pub use self::expression::HashedExpression;
 mod collection;
-pub use self::collection::{ExpressionCollection};
+pub use self::collection::ExpressionCollection;
 mod identifier;
-pub use self::identifier::{Identifier};
+pub use self::identifier::Identifier;

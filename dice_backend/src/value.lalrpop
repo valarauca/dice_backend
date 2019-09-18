@@ -2,6 +2,16 @@ use super::parser_output::{Literal,Expression,Operation,TypeData,Structures,Stat
 
 grammar;
 
+pub Tree: AbstractSyntaxTree<'input> = {
+   <full_parse:( Struct )+> => AbstractSyntaxTree::new(full_parse),
+};
+
+pub Struct: Structures<'input> = {
+   "analyze" <expr: Expr> ";" => Structures::new_analysis(expr),
+   "const" <name: Name> ":" <kind: Kind> "=" <expr: Expr> ";" => Structures::new_const(name, kind, expr),
+   "fn" <name: Name> "(" <arg: ( Name ":" Kind "," )*> <lastArg: (Name ":" Kind)? > ")" "->" <return_type: Kind> "{" <body:Stmts> "}" => Structures::new_func(name, arg, lastArg, return_type, body),
+};
+
 pub Stmt: Statement<'input> = {
   "let" <name: Name> ":" <kind: Kind> "=" <expr: Expr> => Statement::new_var(name, kind, expr),
    "analyze" <expr: Expr> => Statement::new_ret(expr),

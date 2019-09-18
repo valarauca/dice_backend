@@ -28,7 +28,6 @@ pub enum BlockExpression<'a> {
     ),
 }
 impl<'a> BlockExpression<'a> {
-
     pub fn get_hash(&self) -> u64 {
         let mut hasher = SeaHasher::default();
         self.hash(&mut hasher);
@@ -171,43 +170,163 @@ impl<'a> GetType for BlockExpression<'a> {
     }
 }
 
-
 #[test]
 fn test_type_assertions() {
+    assert!(
+        BlockExpression::FunctionArg("foo", 0, TypeData::Int)
+            .get_type()
+            .unwrap()
+            == TypeData::Int
+    );
+    assert!(
+        BlockExpression::FunctionArg("foo", 1, TypeData::Bool)
+            .get_type()
+            .unwrap()
+            == TypeData::Bool
+    );
+    assert!(
+        BlockExpression::FunctionArg("foo", 2, TypeData::CollectionOfInt)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfInt
+    );
+    assert!(
+        BlockExpression::FunctionArg("foo", 3, TypeData::CollectionOfBool)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfBool
+    );
 
-    assert!(BlockExpression::FunctionArg("foo", 0, TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::FunctionArg("foo", 1, TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::FunctionArg("foo", 2, TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::FunctionArg("foo", 3, TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
-
-    assert!(BlockExpression::ExternalConstant("foo", TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::ExternalConstant("foo", TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::ExternalConstant("foo", TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::ExternalConstant("foo", TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
+    assert!(
+        BlockExpression::ExternalConstant("foo", TypeData::Int)
+            .get_type()
+            .unwrap()
+            == TypeData::Int
+    );
+    assert!(
+        BlockExpression::ExternalConstant("foo", TypeData::Bool)
+            .get_type()
+            .unwrap()
+            == TypeData::Bool
+    );
+    assert!(
+        BlockExpression::ExternalConstant("foo", TypeData::CollectionOfInt)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfInt
+    );
+    assert!(
+        BlockExpression::ExternalConstant("foo", TypeData::CollectionOfBool)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfBool
+    );
 
     // we only check the `TypeData` field. Creating these types outside of this is relatively illegal otherwise
-    assert!(BlockExpression::ConstantValue(Literal::Number(20), TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::ConstantValue(Literal::Number(20), TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::ConstantValue(Literal::Number(20), TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::ConstantValue(Literal::Number(20), TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
+    assert!(
+        BlockExpression::ConstantValue(Literal::Number(20), TypeData::Int)
+            .get_type()
+            .unwrap()
+            == TypeData::Int
+    );
+    assert!(
+        BlockExpression::ConstantValue(Literal::Number(20), TypeData::Bool)
+            .get_type()
+            .unwrap()
+            == TypeData::Bool
+    );
+    assert!(
+        BlockExpression::ConstantValue(Literal::Number(20), TypeData::CollectionOfInt)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfInt
+    );
+    assert!(
+        BlockExpression::ConstantValue(Literal::Number(20), TypeData::CollectionOfBool)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfBool
+    );
 
-    assert!(BlockExpression::Var("foo", TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::Var("foo", TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::Var("foo", TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::Var("foo", TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
+    assert!(
+        BlockExpression::Var("foo", TypeData::Int)
+            .get_type()
+            .unwrap()
+            == TypeData::Int
+    );
+    assert!(
+        BlockExpression::Var("foo", TypeData::Bool)
+            .get_type()
+            .unwrap()
+            == TypeData::Bool
+    );
+    assert!(
+        BlockExpression::Var("foo", TypeData::CollectionOfInt)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfInt
+    );
+    assert!(
+        BlockExpression::Var("foo", TypeData::CollectionOfBool)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfBool
+    );
 
     let args = Vec::<_>::new().into_boxed_slice();
-    assert!(BlockExpression::Func("foo", args.clone(), TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::Func("foo", args.clone(), TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::Func("foo", args.clone(), TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::Func("foo", args.clone(), TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
+    assert!(
+        BlockExpression::Func("foo", args.clone(), TypeData::Int)
+            .get_type()
+            .unwrap()
+            == TypeData::Int
+    );
+    assert!(
+        BlockExpression::Func("foo", args.clone(), TypeData::Bool)
+            .get_type()
+            .unwrap()
+            == TypeData::Bool
+    );
+    assert!(
+        BlockExpression::Func("foo", args.clone(), TypeData::CollectionOfInt)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfInt
+    );
+    assert!(
+        BlockExpression::Func("foo", args.clone(), TypeData::CollectionOfBool)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfBool
+    );
 
     // canned block expressions, actual type safe testing is done elswhere
-    let expr = Box::new(BlockExpression::ConstantValue(Literal::Number(6),TypeData::Int));
+    let expr = Box::new(BlockExpression::ConstantValue(
+        Literal::Number(6),
+        TypeData::Int,
+    ));
     let op = Operation::Add;
-    assert!(BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
+    assert!(
+        BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::Int)
+            .get_type()
+            .unwrap()
+            == TypeData::Int
+    );
+    assert!(
+        BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::Bool)
+            .get_type()
+            .unwrap()
+            == TypeData::Bool
+    );
+    assert!(
+        BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::CollectionOfInt)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfInt
+    );
+    assert!(
+        BlockExpression::Op(expr.clone(), op, expr.clone(), TypeData::CollectionOfBool)
+            .get_type()
+            .unwrap()
+            == TypeData::CollectionOfBool
+    );
 }
-

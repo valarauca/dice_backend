@@ -1,4 +1,4 @@
-#![allow(unused_imports,dead_code,unused_variables)]
+#![allow(unused_imports, dead_code, unused_variables)]
 extern crate clap;
 extern crate lalrpop_util;
 extern crate regex;
@@ -9,7 +9,7 @@ pub mod parser_output;
 mod value;
 
 //mod linkage;
-//mod cfgbuilder;
+mod cfgbuilder;
 mod formatter;
 mod namespace;
 mod seahasher;
