@@ -93,7 +93,9 @@ impl<'a> Structures<'a> {
             .chain(last_arg.into_iter().map(last_arg_mapper))
             .collect();
         let args = args.into_boxed_slice();
+        let stdlib = false;
         Structures::Func(FunctionDeclaration {
+            stdlib,
             name,
             args,
             ret,

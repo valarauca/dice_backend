@@ -19,6 +19,7 @@ use super::namespace::Namespace;
 ///
 /// This is an intermediate step to producing
 /// a "real" SSA.
+#[derive(Default)]
 pub struct BasicBlock<'a> {
     vars: HashMap<&'a str, VariableDeclaration<'a>, DefaultSeaHasher>,
     populated_vars: HashMap<&'a str, BlockExpression<'a>, DefaultSeaHasher>,
@@ -30,20 +31,12 @@ impl<'a> BasicBlock<'a> {
         names: &Namespace<'a>,
         func: &FunctionDeclaration<'a>,
     ) -> Result<BasicBlock<'a>, String> {
-        let mut bb = BasicBlock {
-            vars: HashMap::default(),
-            populated_vars: HashMap::default(),
-            populated_return_expresion: None,
-        };
+        let mut bb = BasicBlock::default();
         for (index, (name, kind)) in func.args.iter().enumerate() {
             bb.add_function_vars(func, names, index, name, *kind)?;
         }
         for stmt in func.body.data.iter() {
             bb.add_statement(func, names, stmt)?;
-        }
-        if bb.populated_return_expresion.is_none() {
-            // TODO bad error
-            return Err(format!("function has no return statement"));
         }
         Ok(bb)
     }

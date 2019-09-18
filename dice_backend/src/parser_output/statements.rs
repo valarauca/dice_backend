@@ -5,7 +5,6 @@ use super::statement::Statement;
 /// Statements are a collection of operations
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Statements<'a> {
-    pub stdlib: bool,
     pub data: Box<[Statement<'a>]>,
 }
 impl<'a> fmt::Display for Statements<'a> {
@@ -25,7 +24,6 @@ impl<'a> Statements<'a> {
         }
         let collect: Vec<Statement<'a>> = arg.into_iter().map(mapper).collect();
         Statements {
-            stdlib: false,
             data: collect.into_boxed_slice(),
         }
     }

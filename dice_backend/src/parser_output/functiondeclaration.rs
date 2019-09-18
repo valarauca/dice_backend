@@ -7,6 +7,7 @@ use super::Statements;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FunctionDeclaration<'a> {
     pub name: &'a str,
+    pub stdlib: bool,
     pub args: Box<[(&'a str, TypeData)]>,
     pub ret: TypeData,
     pub body: Statements<'a>,

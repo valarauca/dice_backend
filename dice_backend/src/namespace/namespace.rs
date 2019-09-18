@@ -87,11 +87,11 @@ impl<'a> Namespace<'a> {
         self.functions.insert(
             "roll_d6",
             FunctionDeclaration {
+                stdlib: true,
                 name: "roll_d6",
-                args: vec![("num", TypeData::Int)].into_boxed_slice(),
+                args: vec![("number_of_d6_to_roll", TypeData::Int)].into_boxed_slice(),
                 ret: TypeData::CollectionOfInt,
                 body: Statements {
-                    stdlib: true,
                     data: vec![].into_boxed_slice(),
                 },
             },
@@ -99,11 +99,11 @@ impl<'a> Namespace<'a> {
         self.functions.insert(
             "roll_d3",
             FunctionDeclaration {
+                stdlib: true,
                 name: "roll_d3",
-                args: vec![("num", TypeData::Int)].into_boxed_slice(),
+                args: vec![("number_of_d3_to_roll", TypeData::Int)].into_boxed_slice(),
                 ret: TypeData::CollectionOfInt,
                 body: Statements {
-                    stdlib: true,
                     data: vec![].into_boxed_slice(),
                 },
             },
@@ -111,16 +111,16 @@ impl<'a> Namespace<'a> {
         self.functions.insert(
             "roll",
             FunctionDeclaration {
+                stdlib: true,
                 name: "roll",
                 args: vec![
-                    ("max", TypeData::Int),
-                    ("min", TypeData::Int),
-                    ("num", TypeData::Int),
+                    ("max_value_roll_can_return_inclusive", TypeData::Int),
+                    ("min_value_roll_can_return_inclusive", TypeData::Int),
+                    ("number_of_rolls_to_make", TypeData::Int),
                 ]
                 .into_boxed_slice(),
                 ret: TypeData::CollectionOfInt,
                 body: Statements {
-                    stdlib: true,
                     data: vec![].into_boxed_slice(),
                 },
             },
@@ -128,15 +128,18 @@ impl<'a> Namespace<'a> {
         self.functions.insert(
             "filter",
             FunctionDeclaration {
+                stdlib: true,
                 name: "filter",
                 args: vec![
-                    ("test", TypeData::CollectionOfBool),
-                    ("collection", TypeData::CollectionOfInt),
+                    (
+                        "collection_of_tests_to_filter_with",
+                        TypeData::CollectionOfBool,
+                    ),
+                    ("collection_of_data_to_filter", TypeData::CollectionOfInt),
                 ]
                 .into_boxed_slice(),
                 ret: TypeData::CollectionOfBool,
                 body: Statements {
-                    stdlib: true,
                     data: vec![].into_boxed_slice(),
                 },
             },
@@ -144,11 +147,12 @@ impl<'a> Namespace<'a> {
         self.functions.insert(
             "sum",
             FunctionDeclaration {
+                stdlib: true,
                 name: "sum",
-                args: vec![("collection", TypeData::CollectionOfInt)].into_boxed_slice(),
+                args: vec![("collection_to_sum_with", TypeData::CollectionOfInt)]
+                    .into_boxed_slice(),
                 ret: TypeData::Int,
                 body: Statements {
-                    stdlib: true,
                     data: vec![].into_boxed_slice(),
                 },
             },

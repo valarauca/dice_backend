@@ -5,6 +5,8 @@ use super::structures::Structures;
 use super::super::lalrpop_util::ParseError;
 use super::super::syntaxhelper::CharacterLookup;
 
+use super::super::value::TreeParser;
+
 /// AbstractSyntaxTree is the top level of parse.
 ///
 /// Additional passes are made before a "parse" is
@@ -26,9 +28,8 @@ impl<'a> AbstractSyntaxTree<'a> {
         AbstractSyntaxTree { ast }
     }
 
-    /*
     /// Parse will attempt to construct an abstract syntax tree from the input
-    pub fn parse<'b>(input: &'b str) -> Result<AbstractSyntaxTree<'b>,String> {
+    pub fn parse<'b>(input: &'b str) -> Result<AbstractSyntaxTree<'b>, String> {
         let index = CharacterLookup::new(input);
         match TreeParser::new().parse(input) {
             Ok(tree) => Ok(tree),
@@ -46,5 +47,4 @@ impl<'a> AbstractSyntaxTree<'a> {
             }
         }
     }
-    */
 }
