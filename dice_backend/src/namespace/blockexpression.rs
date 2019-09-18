@@ -15,7 +15,7 @@ use super::namespace::Namespace;
 /// expressions are not a recrusive data type.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BlockExpression<'a> {
-    FunctionArg(&'a str, TypeData),
+    FunctionArg(&'a str, usize, TypeData),
     ConstantValue(Literal<'a>, TypeData),
     ExternalConstant(&'a str, TypeData),
     Func(&'a str, Box<[BlockExpression<'a>]>, TypeData),
@@ -45,6 +45,11 @@ impl<'a> BlockExpression<'a> {
     #[inline(always)]
     pub fn var(arg: &'a str, kind: TypeData) -> Result<BlockExpression<'a>, String> {
         Ok(BlockExpression::Var(arg, kind))
+    }
+
+    #[inline(always)]
+    pub fn cons(arg: &'a str, kind: TypeData) -> Result<BlockExpression<'a>, String> {
+        Ok(BlockExpression::ExternalConstant(arg, kind))
     }
 
     /// func builds a new instance of the function variant
@@ -128,7 +133,7 @@ impl<'a> fmt::Display for BlockExpression<'a> {
         match self {
             BlockExpression::ConstantValue(ref lit, _) => write!(f, "{}", lit),
             BlockExpression::ExternalConstant(ref name, _) => write!(f, "{}", name),
-            BlockExpression::FunctionArg(ref name, _) => write!(f, "{}", name),
+            BlockExpression::FunctionArg(ref name, _, _) => write!(f, "{}", name),
             BlockExpression::Var(ref name, _) => write!(f, "{}", name),
             BlockExpression::Op(ref left, ref op, ref right, _) => {
                 write!(f, "( {} {} {} )", left, op, right)
@@ -158,7 +163,7 @@ impl<'a> GetType for BlockExpression<'a> {
         match self {
             BlockExpression::ConstantValue(_, kind) => Ok(kind.clone()),
             BlockExpression::ExternalConstant(_, kind) => Ok(kind.clone()),
-            BlockExpression::FunctionArg(_, kind) => Ok(kind.clone()),
+            BlockExpression::FunctionArg(_, _, kind) => Ok(kind.clone()),
             BlockExpression::Func(_, _, kind) => Ok(kind.clone()),
             BlockExpression::Var(_, kind) => Ok(kind.clone()),
             BlockExpression::Op(_, _, _, kind) => Ok(kind.clone()),
@@ -170,10 +175,10 @@ impl<'a> GetType for BlockExpression<'a> {
 #[test]
 fn test_type_assertions() {
 
-    assert!(BlockExpression::FunctionArg("foo", TypeData::Int).get_type().unwrap() == TypeData::Int);
-    assert!(BlockExpression::FunctionArg("foo", TypeData::Bool).get_type().unwrap() == TypeData::Bool);
-    assert!(BlockExpression::FunctionArg("foo", TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
-    assert!(BlockExpression::FunctionArg("foo", TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
+    assert!(BlockExpression::FunctionArg("foo", 0, TypeData::Int).get_type().unwrap() == TypeData::Int);
+    assert!(BlockExpression::FunctionArg("foo", 1, TypeData::Bool).get_type().unwrap() == TypeData::Bool);
+    assert!(BlockExpression::FunctionArg("foo", 2, TypeData::CollectionOfInt).get_type().unwrap() == TypeData::CollectionOfInt);
+    assert!(BlockExpression::FunctionArg("foo", 3, TypeData::CollectionOfBool).get_type().unwrap() == TypeData::CollectionOfBool);
 
     assert!(BlockExpression::ExternalConstant("foo", TypeData::Int).get_type().unwrap() == TypeData::Int);
     assert!(BlockExpression::ExternalConstant("foo", TypeData::Bool).get_type().unwrap() == TypeData::Bool);

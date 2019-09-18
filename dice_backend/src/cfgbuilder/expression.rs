@@ -6,6 +6,8 @@ use super::super::parser_output::{
 };
 use super::super::seahash::SeaHasher;
 
+use super::identifier::{Identifier};
+
 /// HashedExpressions are built ontop of BlockExpressions. 
 /// They're goal is to start linking together the overal
 /// program's structure. 
@@ -19,11 +21,11 @@ use super::super::seahash::SeaHasher;
 /// is all we need.
 #[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
 pub enum HashedExpression<'a> {
-    FunctionArg(&'a str, TypeData),
+    FunctionArg(Identifier, TypeData),
     ConstantValue(Literal<'a>,TypeData),
-    ExternalConstant(&'a str, TypeData),
-    Var(&'a str, TypeData),
-    Func(&'a str, Box<[u64]>, TypeData),
+    ExternalConstant(Identifier, TypeData),
+    Var(Identifier, TypeData),
+    Func(Identifier, Box<[u64]>, TypeData),
     Op(
         u64,
         Operation,

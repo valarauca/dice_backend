@@ -5,6 +5,7 @@ use super::super::namespace::{BlockExpression,BasicBlock,Namespace};
 use super::super::seahasher::DefaultSeaHasher;
 
 use super::expression::{HashedExpression};
+use super::identifier::{Identifier};
 
 /// ExpressionCollection initializes the process of providing some
 /// kind of intra-expression linkage. Common identifiers, constants,

@@ -109,13 +109,7 @@ impl<'a> BasicBlock<'a> {
     ) -> Result<BlockExpression<'a>, String> {
         match expr {
             Expression::Literal(ref lit) => Ok(BlockExpression::lit(&lit.lit)?),
-            Expression::Variable(ref var) => match self.get_var_type(n, var.name) {
-                Option::Some(kind) => Ok(BlockExpression::var(var.name, kind)?),
-                Option::None => Err(format!(
-                    "variable '{}' is referenced but not defined",
-                    var.name
-                )),
-            },
+            Expression::Variable(ref var) => Ok(self.convert_expr_var_name(n, var.name)?),
             Expression::Func(ref func) => {
                 // lookup function in namespace
                 let func_data = match n.get_function(func.name) {
@@ -166,7 +160,7 @@ impl<'a> BasicBlock<'a> {
             return Err(format!("within function declaration: '{}' argument: '{}: {}' its name collides with an external variable", f, name, kind));
         }
         self.populated_vars
-            .insert(name, BlockExpression::FunctionArg(name, kind));
+            .insert(name, BlockExpression::FunctionArg(name, index, kind));
         Ok(())
     }
 
@@ -192,7 +186,6 @@ impl<'a> BasicBlock<'a> {
         }
 
         // populate the hash tables
-        self.vars.insert(var.name, var.clone());
         self.populated_vars.insert(var.name, expr);
         Ok(())
     }
@@ -225,21 +218,27 @@ impl<'a> BasicBlock<'a> {
 
     fn is_name_defined(&self, n: &Namespace<'a>, name: &str) -> bool {
         n.is_name_defined(name)
-            || self.vars.get(name).is_some()
             || self.populated_vars.get(name).is_some()
     }
 
-    fn get_var_type(&self, namespace: &Namespace<'a>, name: &str) -> Option<TypeData> {
-        namespace
-            .get_constant_type(name)
-            .into_iter()
-            .chain(self.vars.get(name).map(|var| var.kind)) // variable pool
-            .chain(
-                self.populated_vars
-                    .get(name)
-                    .into_iter()
-                    .filter_map(|var| var.get_type().ok()),
-            ) // possible function args
-            .next()
+    // convert_expr_var_name handles the messiness of determining _what kind of variable_
+    // is being referenced.
+    fn convert_expr_var_name(&self, namespace: &Namespace<'a>, name: &'a str) -> Result<BlockExpression<'a>,String> {
+        match namespace.get_constant(name) {
+            Option::None => { },
+            Option::Some(ref constant_dec) => {
+                return Ok(BlockExpression::ExternalConstant(name, constant_dec.kind.clone()));
+            }
+        };
+        match self.populated_vars.get(name) {
+            Option::Some(&BlockExpression::FunctionArg(_,ref index, ref kind)) => {
+                return Ok(BlockExpression::FunctionArg(name, index.clone(), kind.clone()));
+            },
+            Option::Some(ref block) => {
+                return Ok(BlockExpression::Var(name, block.get_type()?));
+            },
+            Option::None => { },
+        };
+        Err(format!("variable name:'{}' is not defined", name))
     }
 }
