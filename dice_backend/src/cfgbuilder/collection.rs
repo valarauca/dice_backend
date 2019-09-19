@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use super::super::namespace::{BasicBlock, BlockExpression, Namespace};
+use super::super::parser_output::FunctionDeclaration;
 use super::super::seahasher::DefaultSeaHasher;
 
 use super::expression::HashedExpression;
@@ -15,11 +16,36 @@ pub struct ExpressionCollection<'a> {
     data: BTreeMap<u64, HashedExpression<'a>>,
     var_names: BTreeMap<Identifier, &'a str>,
     vars: BTreeMap<Identifier, u64>,
+    functions: BTreeMap<Identifier, ExpressionCollection<'a>>,
+    function_names: BTreeMap<Identifier, &'a str>,
+    function_signature: BTreeMap<Identifier, FunctionDeclaration<'a>>,
     ret: Option<u64>,
 }
 impl<'a> ExpressionCollection<'a> {
+    pub fn new(namespace: &Namespace<'a>) -> ExpressionCollection<'a> {
+        let mut expression = ExpressionCollection::from_namespace(namespace);
+        for (name, block) in namespace.get_all_function_blocks() {
+            let function_name = Identifier::new(None, name);
+            let function_sig = match namespace.get_function(name) {
+                Option::None => unreachable!(),
+                Option::Some(arg) => arg.clone(),
+            };
+            expression
+                .function_signature
+                .insert(function_name.clone(), function_sig);
+            expression.functions.insert(
+                function_name.clone(),
+                ExpressionCollection::from_block(name, block),
+            );
+            expression
+                .function_names
+                .insert(function_name.clone(), name);
+        }
+        expression
+    }
+
     /// This converts a basic block into a much lower CFG like expression.
-    pub fn from_block(namespace: &'a str, block: &BasicBlock<'a>) -> ExpressionCollection<'a> {
+    fn from_block(namespace: &'a str, block: &BasicBlock<'a>) -> ExpressionCollection<'a> {
         let mut collection = ExpressionCollection::default();
         for (name, expr) in block.get_vars() {
             collection.insert_vars(Some(namespace), name, expr);
@@ -33,7 +59,8 @@ impl<'a> ExpressionCollection<'a> {
         collection
     }
 
-    pub fn from_namespace(n: &Namespace<'a>) -> Self {
+    /// convert the top level namespace to a value.
+    fn from_namespace(n: &Namespace<'a>) -> Self {
         let mut collection = ExpressionCollection::default();
         for (name, expr) in n.get_own_block().into_iter().flat_map(|b| b.get_vars()) {
             collection.insert_vars(None, name, expr);

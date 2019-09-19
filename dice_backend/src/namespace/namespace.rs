@@ -4,7 +4,8 @@ use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
 use super::super::parser_output::{
-    AnalysisDeclaration, ConstantDeclaration, FunctionDeclaration, Statements, Structures, TypeData,
+    AbstractSyntaxTree, AnalysisDeclaration, ConstantDeclaration, FunctionDeclaration, Statements,
+    Structures, TypeData,
 };
 use super::super::seahasher::DefaultSeaHasher;
 
@@ -13,6 +14,7 @@ use super::block::BasicBlock;
 /// Namespace represents the pre-parsing of the of the AST.
 /// It will attempt to ensure there are no collisions with
 /// the standard library, or the input program.
+#[derive(Default)]
 pub struct Namespace<'a> {
     constants: HashMap<&'a str, ConstantDeclaration<'a>, DefaultSeaHasher>,
     functions: HashMap<&'a str, FunctionDeclaration<'a>, DefaultSeaHasher>,
@@ -22,16 +24,10 @@ pub struct Namespace<'a> {
 }
 impl<'a> Namespace<'a> {
     /// new constructs an instance of namespace.
-    pub fn new<'b>(args: &'b [Structures<'a>]) -> Result<Namespace<'a>, String> {
-        let mut analysis = Namespace {
-            constants: HashMap::default(),
-            functions: HashMap::default(),
-            function_body: HashMap::default(),
-            owndata: None,
-            analysis: None,
-        };
+    pub fn new(ast: &AbstractSyntaxTree<'a>) -> Result<Namespace<'a>, String> {
+        let mut analysis = Namespace::default();
         analysis.populate_std();
-        for item in args {
+        for item in ast.ast.iter() {
             // actions do nothing unless items is of
             // correct enum variance. when not it,
             // returns okay.
@@ -62,6 +58,10 @@ impl<'a> Namespace<'a> {
     /// return an iterator over all constants
     pub fn get_all_constants<'b>(&'b self) -> Iter<'b, &'a str, ConstantDeclaration<'a>> {
         self.constants.iter()
+    }
+
+    pub fn get_all_function_blocks<'b>(&'b self) -> Iter<'b, &'a str, BasicBlock<'a>> {
+        self.function_body.iter()
     }
 
     /// returns the analysis for this program

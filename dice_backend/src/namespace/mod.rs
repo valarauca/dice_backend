@@ -17,7 +17,7 @@ fn test_namspace_with_trivial_program_1() {
         Ok(ast) => ast,
         Err(e) => panic!("ast error: {:?}", e),
     };
-    let namespace = match Namespace::new(&ast.ast) {
+    let namespace = match Namespace::new(&ast) {
         Ok(namespace) => namespace,
         Err(e) => panic!("namespace error: {:?}", e),
     };
@@ -47,7 +47,7 @@ analyze roll_d6(value);
         Ok(ast) => ast,
         Err(e) => panic!("ast error: {:?}", e),
     };
-    let namespace = match Namespace::new(&ast.ast) {
+    let namespace = match Namespace::new(&ast) {
         Ok(namespace) => namespace,
         Err(e) => panic!("namespace error: {:?}", e),
     };
