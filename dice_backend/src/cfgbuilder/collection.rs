@@ -17,47 +17,58 @@ pub struct ExpressionCollection<'a> {
     var_names: BTreeMap<Identifier, &'a str>,
     vars: BTreeMap<Identifier, u64>,
     functions: BTreeMap<Identifier, ExpressionCollection<'a>>,
-    function_names: BTreeMap<Identifier, &'a str>,
     function_signature: BTreeMap<Identifier, FunctionDeclaration<'a>>,
     ret: Option<u64>,
 }
 impl<'a> ExpressionCollection<'a> {
+
+    /// Takes the existing namespace structure and converts it to an
+    /// an expression collection.
     pub fn new(namespace: &Namespace<'a>) -> ExpressionCollection<'a> {
         let mut expression = ExpressionCollection::from_namespace(namespace);
         for (name, block) in namespace.get_all_function_blocks() {
-            let function_name = Identifier::new(None, name);
-            let function_sig = match namespace.get_function(name) {
-                Option::None => unreachable!(),
-                Option::Some(arg) => arg.clone(),
-            };
-            expression
-                .function_signature
-                .insert(function_name.clone(), function_sig);
-            expression.functions.insert(
-                function_name.clone(),
-                ExpressionCollection::from_block(name, block),
-            );
-            expression
-                .function_names
-                .insert(function_name.clone(), name);
+            expression.insert_function(namespace, name, block)
         }
         expression
     }
 
+    /// get variable returns the hashed expression which defines the variable.
+    pub fn get_variable<'b>(&'b self, id: &Identifier) -> &'b HashedExpression<'a> {
+        let expression_id = match self.vars.get(id) {
+            Option::None => unreachable!(),
+            Option::Some(expression_id) => expression_id
+        };
+        match self.data.get(&expression_id) {
+            Option::None => unreachable!(),
+            Option::Some(expr) => expr
+        }
+    }
+
     /// This converts a basic block into a much lower CFG like expression.
-    fn from_block(namespace: &'a str, block: &BasicBlock<'a>) -> ExpressionCollection<'a> {
+    fn from_block(
+        namespace: &'a str,
+        block: &BasicBlock<'a>,
+        sig: &FunctionDeclaration<'a>,
+    ) -> ExpressionCollection<'a> {
         let mut collection = ExpressionCollection::default();
         for (name, expr) in block.get_vars() {
             collection.insert_vars(Some(namespace), name, expr);
         }
-        match block.get_return() {
-            &Option::None => unreachable!(),
-            &Option::Some(ref expr) => {
-                collection.ret = Some(collection.insert_block(Some(namespace), expr));
-            }
-        };
+        if !sig.stdlib {
+            match block.get_return() {
+                &Option::None => unreachable!(),
+                &Option::Some(ref expr) => {
+                    collection.ret = Some(collection.insert_block(Some(namespace), expr));
+                }
+            };
+        }
         collection
     }
+
+    /*
+     * Private Functions help in construction
+     *
+     */
 
     /// convert the top level namespace to a value.
     fn from_namespace(n: &Namespace<'a>) -> Self {
@@ -77,6 +88,22 @@ impl<'a> ExpressionCollection<'a> {
             }
         };
         collection
+    }
+
+    fn insert_function(
+        &mut self,
+        namespace: &Namespace<'a>,
+        name: &'a str,
+        block: &BasicBlock<'a>,
+    ) {
+        let id = Identifier::new(None, name);
+        let sig = match namespace.get_function(name) {
+            Option::None => unreachable!(),
+            Option::Some(arg) => arg.clone(),
+        };
+        let coll = ExpressionCollection::from_block(name, block, &sig);
+        self.functions.insert(id, coll);
+        self.function_signature.insert(id, sig);
     }
 
     /// each variable is shoved into the map

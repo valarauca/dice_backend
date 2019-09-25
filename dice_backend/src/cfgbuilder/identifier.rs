@@ -19,7 +19,7 @@ impl Identifier {
         }
     }
 
-    pub fn new_scoped(namespace: &str, name: &str) -> Identifier {
+    fn new_scoped(namespace: &str, name: &str) -> Identifier {
         let namespace: u64 = {
             let mut seahasher = SeaHasher::default();
             namespace.hash(&mut seahasher);
@@ -33,7 +33,7 @@ impl Identifier {
         Identifier::Scoped(namespace, name)
     }
 
-    pub fn new_global(name: &str) -> Identifier {
+    fn new_global(name: &str) -> Identifier {
         let name: u64 = {
             let mut seahasher = SeaHasher::default();
             name.hash(&mut seahasher);
