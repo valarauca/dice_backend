@@ -21,7 +21,6 @@ pub struct ExpressionCollection<'a> {
     ret: Option<u64>,
 }
 impl<'a> ExpressionCollection<'a> {
-
     /// Takes the existing namespace structure and converts it to an
     /// an expression collection.
     pub fn new(namespace: &Namespace<'a>) -> ExpressionCollection<'a> {
@@ -32,16 +31,31 @@ impl<'a> ExpressionCollection<'a> {
         expression
     }
 
+    /// returns an expression
+    pub fn get_expr<'b>(&'b self, id: &u64) -> &'b HashedExpression<'a> {
+        match self.data.get(&id) {
+            Option::None => unreachable!(),
+            Option::Some(ref expr) => expr,
+        }
+    }
+
+    /// returns if the function is or is not part of the stdlib
+    pub fn is_function_stdlib(&self, id: &Identifier) -> bool {
+        self.function_signature
+            .get(id)
+            .into_iter()
+            .map(|sig| sig.stdlib.clone())
+            .next()
+            .unwrap_or(false)
+    }
+
     /// get variable returns the hashed expression which defines the variable.
     pub fn get_variable<'b>(&'b self, id: &Identifier) -> &'b HashedExpression<'a> {
         let expression_id = match self.vars.get(id) {
             Option::None => unreachable!(),
-            Option::Some(expression_id) => expression_id
+            Option::Some(expression_id) => expression_id,
         };
-        match self.data.get(&expression_id) {
-            Option::None => unreachable!(),
-            Option::Some(expr) => expr
-        }
+        self.get_expr(&expression_id)
     }
 
     /// This converts a basic block into a much lower CFG like expression.

@@ -8,9 +8,9 @@ use clap::{App, Arg, SubCommand};
 pub mod parser_output;
 mod value;
 
-//mod linkage;
 mod cfgbuilder;
 mod formatter;
+mod linkage;
 mod namespace;
 mod seahasher;
 mod syntaxhelper;
