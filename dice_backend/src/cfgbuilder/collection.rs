@@ -31,12 +31,35 @@ impl<'a> ExpressionCollection<'a> {
         expression
     }
 
+    /// get the return statement
+    pub fn get_return<'b>(&'b self) -> Option<&'b HashedExpression<'a>> {
+        self.ret
+            .clone()
+            .into_iter()
+            .flat_map(|ret_id| self.data.get(&ret_id))
+            .next()
+    }
+
     /// returns an expression
-    pub fn get_expr<'b>(&'b self, id: &u64) -> &'b HashedExpression<'a> {
-        match self.data.get(&id) {
-            Option::None => unreachable!(),
-            Option::Some(ref expr) => expr,
-        }
+    pub fn get_expr<'b>(
+        &'b self,
+        namespace: Option<Identifier>,
+        id: &u64,
+    ) -> Option<&'b HashedExpression<'a>> {
+        namespace
+            .into_iter()
+            .flat_map(|namespace| self.functions.get(&namespace))
+            .flat_map(|func| func.get_expr(None, id))
+            .chain(self.data.get(id))
+            .next()
+    }
+
+    /// returns the body of a function
+    pub fn get_function_context<'b>(
+        &'b self,
+        id: &Identifier,
+    ) -> Option<&'b ExpressionCollection<'a>> {
+        self.functions.get(id)
     }
 
     /// returns if the function is or is not part of the stdlib
@@ -50,12 +73,24 @@ impl<'a> ExpressionCollection<'a> {
     }
 
     /// get variable returns the hashed expression which defines the variable.
-    pub fn get_variable<'b>(&'b self, id: &Identifier) -> &'b HashedExpression<'a> {
-        let expression_id = match self.vars.get(id) {
-            Option::None => unreachable!(),
-            Option::Some(expression_id) => expression_id,
-        };
-        self.get_expr(&expression_id)
+    pub fn get_variable<'b>(&'b self, id: &Identifier) -> Option<&'b HashedExpression<'a>> {
+        // try to convert ID into a namespace
+        id.defining_namespace()
+            .into_iter()
+            // look up that namespace's function
+            .flat_map(|namespace| self.functions.get(&namespace))
+            // look up that variable within the function's namespace
+            .flat_map(|func| func.get_variable(id))
+            // if we failed to find anything build in a fall back
+            // just search the local namespace
+            .chain(
+                self.vars
+                    .get(id)
+                    .into_iter()
+                    .filter_map(|expr_id| self.get_expr(None, expr_id)),
+            )
+            // return the first thing we find
+            .next()
     }
 
     /// This converts a basic block into a much lower CFG like expression.

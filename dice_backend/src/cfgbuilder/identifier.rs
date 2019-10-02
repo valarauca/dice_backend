@@ -12,10 +12,21 @@ pub enum Identifier {
     Scoped(u64, u64),
 }
 impl Identifier {
+    /// new constructs an identifier from the present namespace (function)
+    /// the value is scoped within.
     pub fn new(namespace: Option<&str>, name: &str) -> Identifier {
         match namespace {
             Option::None => Identifier::new_global(name),
             Option::Some(value) => Identifier::new_scoped(value, name),
+        }
+    }
+
+    /// if an identifier is describing something within a scope
+    /// we need to enter that scope.
+    pub fn defining_namespace(&self) -> Option<Identifier> {
+        match self {
+            &Identifier::Scoped(ref namespace, _) => Some(Identifier::Global(namespace.clone())),
+            _ => None,
         }
     }
 

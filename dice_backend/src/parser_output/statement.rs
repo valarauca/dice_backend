@@ -55,7 +55,7 @@ fn test_statement_parse() {
             lit: Literal::Number(15i64),
         }),
     });
-    assert!(parser.parse("let arg: int = 15").unwrap() == stmt);
+    assert!(parser.parse("let arg: int = 15;").unwrap() == stmt);
 
     // return false
     let stmt = Statement::Return(TerminalExpression {
@@ -63,5 +63,5 @@ fn test_statement_parse() {
             lit: Literal::Boolean(false),
         }),
     });
-    assert!(parser.parse("analyze false").unwrap() == stmt);
+    assert!(parser.parse("return false;").unwrap() == stmt);
 }

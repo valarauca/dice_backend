@@ -10,8 +10,8 @@ mod value;
 
 mod cfgbuilder;
 mod formatter;
-mod linkage;
 mod namespace;
+//mod runner;
 mod seahasher;
 mod syntaxhelper;
 mod validator;

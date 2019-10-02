@@ -17,12 +17,14 @@ impl<'a> fmt::Display for Statements<'a> {
 }
 impl<'a> Statements<'a> {
     #[inline(always)]
-    pub fn new(arg: Vec<(Statement<'a>, &'a str)>) -> Statements<'a> {
+    pub fn new(collect: Vec<Statement<'a>>) -> Statements<'a> {
+        /*
         #[inline(always)]
         fn mapper<'a>(tup: (Statement<'a>, &'a str)) -> Statement<'a> {
             tup.0
         }
-        let collect: Vec<Statement<'a>> = arg.into_iter().map(mapper).collect();
+        */
+        //let collect: Vec<Statement<'a>> = arg.into_iter().map(mapper).collect();
         Statements {
             data: collect.into_boxed_slice(),
         }

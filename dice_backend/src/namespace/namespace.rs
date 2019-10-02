@@ -109,6 +109,24 @@ impl<'a> Namespace<'a> {
             },
         );
         self.functions.insert(
+            "reroll",
+            FunctionDeclaration {
+                stdlib: true,
+                name: "reroll",
+                args: vec![
+                    ("max_value_roll_can_return_inclusive", TypeData::Int),
+                    ("min_value_roll_can_return_inclusive", TypeData::Int),
+                    ("filters_to_reroll", TypeData::CollectionOfBool),
+                    ("collection_to_be_re_rolled", TypeData::CollectionOfInt),
+                ]
+                .into_boxed_slice(),
+                ret: TypeData::CollectionOfInt,
+                body: Statements {
+                    data: vec![].into_boxed_slice(),
+                },
+            },
+        );
+        self.functions.insert(
             "roll",
             FunctionDeclaration {
                 stdlib: true,

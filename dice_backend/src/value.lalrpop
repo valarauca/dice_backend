@@ -13,12 +13,12 @@ pub Struct: Structures<'input> = {
 };
 
 pub Stmt: Statement<'input> = {
-  "let" <name: Name> ":" <kind: Kind> "=" <expr: Expr> => Statement::new_var(name, kind, expr),
-   "analyze" <expr: Expr> => Statement::new_ret(expr),
+  "let" <name: Name> ":" <kind: Kind> "=" <expr: Expr> ";" => Statement::new_var(name, kind, expr),
+   "return" <expr: Expr> ";" => Statement::new_ret(expr),
 };
 
 pub Stmts: Statements<'input> = {
-   <multiple: ( Stmt ";" )*> => Statements::new(multiple),
+   <multiple: ( Stmt )*> => Statements::new(multiple),
 }
 
 pub Kind: TypeData = {
