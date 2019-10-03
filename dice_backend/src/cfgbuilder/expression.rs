@@ -39,9 +39,26 @@ impl<'a> HashedExpression<'a> {
         }
     }
 
+    pub fn hash(h: &Option<HashedExpression<'a>>) -> Option<u64> {
+        h.into_iter().map(|expr| expr.get_hash()).next()
+    }
+
     pub fn get_hash(&self) -> u64 {
         let mut hasher = SeaHasher::default();
         self.hash(&mut hasher);
         hasher.finish()
+    }
+
+    pub fn get_func_arg(index: &usize) -> impl Fn(&HashedExpression<'a>) -> Option<u64> {
+        let index = index.clone();
+        return move |arg: &HashedExpression<'a>| -> Option<u64> {
+            let index = index;
+            match arg {
+                &HashedExpression::Func(_, ref args, _) if index.clone() < args.len() => {
+                    Some(args[index.clone()].clone())
+                }
+                _ => None,
+            }
+        };
     }
 }

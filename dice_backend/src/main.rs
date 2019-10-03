@@ -11,7 +11,7 @@ mod value;
 mod cfgbuilder;
 mod formatter;
 mod namespace;
-//mod runner;
+mod runner;
 mod seahasher;
 mod syntaxhelper;
 mod validator;
