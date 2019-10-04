@@ -5,8 +5,10 @@ use super::super::cfgbuilder::{ExpressionCollection, HashedExpression, Identifie
 #[derive(Clone)]
 pub struct CallStack<'a, 'b> {
     namespace: &'b ExpressionCollection<'a>,
-    stack_function_body: Vec<&'b ExpressionCollection<'a>>,
-    stack_function_name: Vec<Identifier>,
+    body: Vec<&'b ExpressionCollection<'a>>,
+    name: Vec<Identifier>,
+    args: Vec<Box<[u64]>>,
+    expr: Vec<u64>,
 }
 impl<'a, 'b> CallStack<'a, 'b> {
     /// This will build a new instance of CallStack from a root
@@ -14,34 +16,39 @@ impl<'a, 'b> CallStack<'a, 'b> {
     pub fn new(namespace: &'b ExpressionCollection<'a>) -> CallStack<'a, 'b> {
         CallStack {
             namespace: namespace,
-            stack_function_body: Vec::with_capacity(10),
-            stack_function_name: Vec::with_capacity(10),
+            body: Vec::with_capacity(10),
+            name: Vec::with_capacity(10),
+            args: Vec::with_capacity(10),
+            expr: Vec::with_capacity(10),
         }
     }
 
     /// push function will modify the internal stack adding another function to the
     /// context
-    pub fn push(&mut self, id: &Identifier) {
-        assert_eq!(
-            self.stack_function_body.len(),
-            self.stack_function_name.len()
-        );
+    pub fn push(&mut self, id: &Identifier, expr: &u64) {
+        let args = match self.get_expr(expr) {
+            Option::Some(HashedExpression::Func(ref looked_up, ref args, _)) => {
+                assert_eq!(looked_up, id);
+                args.clone()
+            }
+            _ => unreachable!(),
+        };
         let namespace = match self.namespace.get_function_context(id) {
             Option::None => unreachable!(),
             Option::Some(namespace) => namespace,
         };
-        self.stack_function_name.push(id.clone());
-        self.stack_function_body.push(namespace);
+        self.name.push(id.clone());
+        self.body.push(namespace);
+        self.args.push(args);
+        self.expr.push(expr.clone());
     }
 
     /// removes a function from the namespace
     pub fn pop(&mut self) {
-        assert_eq!(
-            self.stack_function_body.len(),
-            self.stack_function_name.len()
-        );
-        self.stack_function_name.pop();
-        self.stack_function_body.pop();
+        self.name.pop();
+        self.body.pop();
+        self.args.pop();
+        self.expr.pop();
     }
 
     pub fn is_stdlib(&self, id: &Identifier) -> bool {
@@ -50,13 +57,9 @@ impl<'a, 'b> CallStack<'a, 'b> {
 
     /// provides the returning expression for the current namespace
     pub fn get_return(&self) -> Option<&'b HashedExpression<'a>> {
-        assert_eq!(
-            self.stack_function_body.len(),
-            self.stack_function_name.len()
-        );
         self.get_last_index()
             .into_iter()
-            .flat_map(|index| self.stack_function_body[index].get_return())
+            .flat_map(|index| self.body[index].get_return())
             .chain(self.namespace.get_return())
             .next()
     }
@@ -76,13 +79,29 @@ impl<'a, 'b> CallStack<'a, 'b> {
     pub fn get_context(&self) -> Option<Identifier> {
         self.get_last_index()
             .into_iter()
-            .map(|index| self.stack_function_name[index].clone())
+            .map(|index| self.name[index].clone())
+            .next()
+    }
+    /// returns the expression of the function invocation
+    /// we are currently in
+    pub fn get_ctx_expr(&self) -> Option<u64> {
+        self.get_last_index()
+            .into_iter()
+            .map(|index| self.expr[index].clone())
+            .next()
+    }
+    /// returns the expression data of the arg's index we're in
+    pub fn get_arg_index(&self, arg_index: usize) -> Option<u64> {
+        use std::ops::Index;
+        self.get_last_index()
+            .into_iter()
+            .map(|index| self.args.index(index).index(arg_index).clone())
             .next()
     }
 
     #[inline(always)]
     fn get_last_index(&self) -> Option<usize> {
-        match self.stack_function_name.len() {
+        match self.name.len() {
             0 => None,
             x => Some(x - 1),
         }

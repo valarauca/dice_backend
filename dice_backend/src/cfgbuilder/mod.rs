@@ -38,12 +38,14 @@ analyze reroll_1(roll(MAX,MIN,10));
     let mut stack = CallStack::new(&cfgcoll);
 
     // push our function onto the stack
-    let return_func_id = match stack.get_return() {
-        Option::Some(HashedExpression::Func(ref id, ref args, TypeData::CollectionOfInt)) => {
+    let expr = stack.get_return().unwrap();
+    let expr_hash = expr.get_hash();
+    let return_func_id = match expr {
+        HashedExpression::Func(ref id, ref args, TypeData::CollectionOfInt) => {
             // this should be our `analyze reroll_1(roll(MAX, MIN, 10));
             // statement
             assert!(args.len() == 1);
-            stack.push(id);
+            stack.push(id, &expr_hash);
             id.clone()
         }
         anything_else => panic!("Expected a function. Found: {:?}", anything_else),
