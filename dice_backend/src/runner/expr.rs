@@ -58,6 +58,11 @@ impl<'a> InlinedExpression<'a> {
                 Some(output)
             }
             &HashedExpression::Func(ref id, ref args, _) => {
+                let new_args = args.iter().filter_map(|expr| callstack.get_expr(expr)).map(|expr| InlinedExpression::new(expr, stack, coll)).collect::<Vec<_>>().into_boxed_slice();
+                if callstack.is_stdlib(id) {
+                    Some(InlinedExpression::StdLibFunc(
+                } else {
+                }
                 stack.push(id, &hash);
                 let output = stack
                     .get_return()

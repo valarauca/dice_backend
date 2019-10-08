@@ -168,6 +168,11 @@ impl<'a> ExpressionCollection<'a> {
         self.vars.insert(name_id, blocked_id);
     }
 
+    /// returns the names of the collection
+    pub fn get_func_name(&self, id: &Identifier) -> Option<&'a str> {
+        self.var_names.ge
+    }
+
     /// individual expressions are converted to HashedExpression, then inserted
     /// into the internal collection.
     fn insert_block(&mut self, n: Option<&'a str>, expr: &BlockExpression<'a>) -> u64 {

@@ -11,6 +11,12 @@ pub struct InlinedCollection<'a> {
     ret: Option<u64>,
 }
 impl<'a> InlinedCollection<'a> {
+    /// returns an expression based on its hashed identifier
+    pub fn get_expr<'b>(&'b self, inlined_expr: &u64) -> Option<&'b InlinedExpression<'a>> {
+        self.expr.get(inlined_expr)
+    }
+
+    /// inserts a hashed expression, and its InlinedExpression counter part.
     pub fn insert_hash(&mut self, hashed_expr: &u64, inlined: &InlinedExpression<'a>) {
         let inlined_hashed = inlined.get_hash();
         self.hashed
