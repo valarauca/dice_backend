@@ -55,6 +55,10 @@ impl<'a, 'b> CallStack<'a, 'b> {
         self.namespace.is_function_stdlib(id)
     }
 
+    pub fn get_function_name(&self, id: &Identifier) -> Option<&'a str> {
+        self.namespace.get_function_name(id)
+    }
+
     /// provides the returning expression for the current namespace
     pub fn get_return(&self) -> Option<&'b HashedExpression<'a>> {
         self.get_last_index()

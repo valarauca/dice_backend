@@ -62,6 +62,11 @@ impl<'a> ExpressionCollection<'a> {
         self.functions.get(id)
     }
 
+    /// returns the name of the function
+    pub fn get_function_name(&self, id: &Identifier) -> Option<&'a str> {
+        self.function_signature.get(id).into_iter().map(|sig| sig.name).next()
+    }
+
     /// returns if the function is or is not part of the stdlib
     pub fn is_function_stdlib(&self, id: &Identifier) -> bool {
         self.function_signature
@@ -168,10 +173,6 @@ impl<'a> ExpressionCollection<'a> {
         self.vars.insert(name_id, blocked_id);
     }
 
-    /// returns the names of the collection
-    pub fn get_func_name(&self, id: &Identifier) -> Option<&'a str> {
-        self.var_names.ge
-    }
 
     /// individual expressions are converted to HashedExpression, then inserted
     /// into the internal collection.

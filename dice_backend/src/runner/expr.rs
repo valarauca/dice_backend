@@ -9,7 +9,7 @@ use super::coll::InlinedCollection;
 /// Inlined Expression contains the very base values
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InlinedExpression<'a> {
-    StdLibFunc(&'a str, Box<InlinedExpression<'a>>),
+    StdLibFunc(&'a str, Box<[u64]>),
     Operation(
         Box<InlinedExpression<'a>>,
         Operation,
@@ -58,32 +58,42 @@ impl<'a> InlinedExpression<'a> {
                 Some(output)
             }
             &HashedExpression::Func(ref id, ref args, _) => {
-                let new_args = args.iter().filter_map(|expr| callstack.get_expr(expr)).map(|expr| InlinedExpression::new(expr, stack, coll)).collect::<Vec<_>>().into_boxed_slice();
-                if callstack.is_stdlib(id) {
-                    Some(InlinedExpression::StdLibFunc(
+                if stack.is_stdlib(id) {
+                    let mut new_args = Vec::<u64>::with_capacity(args.len());
+                    for arg in args.iter() {
+                        let expr = match stack.get_expr(arg) {
+                            Option::None => unreachable!(),
+                            Option::Some(ref expr) => expr.clone()
+                        };
+                        let expr = InlinedExpression::new(expr, stack, coll);
+                        new_args.push(expr.get_hash());
+                    }
+                    let new_args = new_args.into_boxed_slice();
+                    let name = stack.get_function_name(id).unwrap();
+                    Some(InlinedExpression::StdLibFunc(name, new_args))
                 } else {
-                }
-                stack.push(id, &hash);
-                let output = stack
-                    .get_return()
+                    stack.push(id, &hash); 
+                    let output = stack
+                        .get_return()
                     .into_iter()
                     .map(|expr| InlinedExpression::new(expr, stack, coll))
                     .next();
-                stack.pop();
-                output
+                    stack.pop();
+                    output
+                }
             }
             &HashedExpression::Op(ref left, op, ref right, out) => {
                 match (stack.get_expr(left), stack.get_expr(right)) {
                     (Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref left),TypeData::Bool)),Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref right),TypeData::Bool))) => {
-                     match (out, op) {
-                         (TypeData::Bool, Operation::And) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left & right)))
-                         },
-                         (TypeData::Bool, Operation::Or) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left | right)))
-                         },
-                         anything_else => panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
-                     }
+                        match (out, op) {
+                            (TypeData::Bool, Operation::And) => {
+                                Some(InlinedExpression::Constant(Literal::Boolean(left & right)))
+                             },
+                             (TypeData::Bool, Operation::Or) => {
+                                Some(InlinedExpression::Constant(Literal::Boolean(left | right)))
+                             },
+                             anything_else => panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
+                        }
                     }
                     (Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref left),TypeData::Int)),Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref right),TypeData::Int))) => {
                         match (out, op) {
@@ -117,10 +127,10 @@ impl<'a> InlinedExpression<'a> {
                          (TypeData::Bool, Operation::GreaterThanEqual) => {
                              Some(InlinedExpression::Constant(Literal::Boolean(left >= right)))
                          },
-                             (TypeData::Bool, Operation::LessThanEqual) => {
+                         (TypeData::Bool, Operation::LessThanEqual) => {
                              Some(InlinedExpression::Constant(Literal::Boolean(left <= right)))
-                             },
-                             anything_else => panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
+                         },
+                         anything_else => panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
                         }
                     },
                     anything_else => panic!("not supported"),
