@@ -1,4 +1,4 @@
-use super::super::cfgbuilder::{ExpressionCollection, HashedExpression};
+use super::super::cfgbuilder::{CallStack, ExpressionCollection, HashedExpression};
 use std::collections::BTreeMap;
 
 use super::expr::InlinedExpression;
@@ -11,6 +11,20 @@ pub struct InlinedCollection<'a> {
     ret: Option<u64>,
 }
 impl<'a> InlinedCollection<'a> {
+    /// converts the ExpressionCollection into an inlined collection
+    pub fn new(arg: &ExpressionCollection<'a>) -> InlinedCollection<'a> {
+        let mut stack = CallStack::new(arg);
+        let mut coll = InlinedCollection::default();
+        let return_expr = match arg.get_return() {
+            Option::None => unreachable!(),
+            Option::Some(ref expr) => {
+                InlinedExpression::new(expr, &mut stack, &mut coll).get_hash()
+            }
+        };
+        ::std::mem::replace(&mut coll.ret, Some(return_expr));
+        coll
+    }
+
     /// returns an expression based on its hashed identifier
     pub fn get_expr<'b>(&'b self, inlined_expr: &u64) -> Option<&'b InlinedExpression<'a>> {
         self.expr.get(inlined_expr)
@@ -23,7 +37,9 @@ impl<'a> InlinedCollection<'a> {
             .insert(hashed_expr.clone(), inlined_hashed.clone());
         self.expr.insert(inlined_hashed.clone(), inlined.clone());
     }
-    ///
+
+    /// returns the Hash, and _maybe_ an InlinedExpression if a representation of that
+    /// value already exists.
     pub fn get_from_hashed<'b>(
         &'b self,
         hashed: &HashedExpression<'a>,
