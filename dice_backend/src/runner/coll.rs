@@ -24,6 +24,11 @@ impl<'a> InlinedCollection<'a> {
         ::std::mem::replace(&mut coll.ret, Some(return_expr));
         coll
     }
+    
+    /// provides the return expression value
+    pub fn get_return<'b>(&'b self) -> Option<u64> {
+        self.ret.clone()
+    }
 
     /// returns an expression based on its hashed identifier
     pub fn get_expr<'b>(&'b self, inlined_expr: &u64) -> Option<&'b InlinedExpression<'a>> {
