@@ -5,6 +5,9 @@ extern crate regex;
 extern crate seahash;
 use clap::{App, Arg, SubCommand};
 
+#[macro_use]
+mod macros;
+
 pub mod parser_output;
 mod value;
 
@@ -12,6 +15,7 @@ mod cfgbuilder;
 mod formatter;
 mod namespace;
 mod runner;
+mod ordering;
 mod seahasher;
 mod syntaxhelper;
 mod validator;

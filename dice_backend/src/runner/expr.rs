@@ -56,7 +56,7 @@ impl<'a> InlinedExpression<'a> {
                              (TypeData::Bool, Operation::Or) => {
                                 Some(InlinedExpression::Constant(Literal::Boolean(left | right)))
                              },
-                             anything_else => panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
+                             anything_else => _unreachable_panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
                         }
                     }
                     (Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref left),TypeData::Int)),Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref right),TypeData::Int))) => {
@@ -94,7 +94,7 @@ impl<'a> InlinedExpression<'a> {
                          (TypeData::Bool, Operation::LessThanEqual) => {
                              Some(InlinedExpression::Constant(Literal::Boolean(left <= right)))
                          },
-                         anything_else => panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
+                         anything_else => _unreachable_panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
                         }
                     },
                     (Option::Some(ref left), Option::Some(ref right)) => {
@@ -102,7 +102,7 @@ impl<'a> InlinedExpression<'a> {
                         let right = InlinedExpression::new(right, stack, coll).get_hash();
                         Some(InlinedExpression::Operation(left, op, right))
                     },
-                    anything_else => panic!("illegal operation. Should be caught by type checker. {:?}", anything_else)
+                    anything_else => _unreachable_panic!("illegal operation. Should be caught by type checker. {:?}", anything_else)
                 }
             }
         };
@@ -117,7 +117,7 @@ impl<'a> InlinedExpression<'a> {
             }
             &Option::None => {
                 // debug assertions are just a lazy man's tests right?
-                panic!("no input for {:?}", expr)
+                _unreachable_panic!("no input for {:?}", expr)
             }
         };
         output.unwrap()
@@ -168,7 +168,7 @@ impl<'a> InlinedExpression<'a> {
             let mut new_args = Vec::<u64>::with_capacity(args.len());
             for arg in args.iter() {
                 let expr = match stack.get_expr(arg) {
-                    Option::None => unreachable!(),
+                    Option::None => _unreachable_panic!(),
                     Option::Some(ref expr) => expr.clone(),
                 };
                 let expr = InlinedExpression::new(expr, stack, coll);

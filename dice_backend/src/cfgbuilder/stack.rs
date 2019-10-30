@@ -31,10 +31,10 @@ impl<'a, 'b> CallStack<'a, 'b> {
                 assert_eq!(looked_up, id);
                 args.clone()
             }
-            _ => unreachable!(),
+            _ => _unreachable_panic!(),
         };
         let namespace = match self.namespace.get_function_context(id) {
-            Option::None => unreachable!(),
+            Option::None => _unreachable_panic!(),
             Option::Some(namespace) => namespace,
         };
         self.name.push(id.clone());

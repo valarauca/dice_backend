@@ -16,7 +16,7 @@ impl<'a> InlinedCollection<'a> {
         let mut stack = CallStack::new(arg);
         let mut coll = InlinedCollection::default();
         let return_expr = match arg.get_return() {
-            Option::None => unreachable!(),
+            Option::None => _unreachable_panic!(),
             Option::Some(ref expr) => {
                 InlinedExpression::new(expr, &mut stack, &mut coll).get_hash()
             }

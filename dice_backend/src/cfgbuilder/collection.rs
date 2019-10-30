@@ -114,7 +114,7 @@ impl<'a> ExpressionCollection<'a> {
         }
         if !sig.stdlib {
             match block.get_return() {
-                &Option::None => unreachable!(),
+                &Option::None => _unreachable_panic!(),
                 &Option::Some(ref expr) => {
                     collection.ret = Some(collection.insert_block(Some(namespace), expr));
                 }
@@ -140,7 +140,7 @@ impl<'a> ExpressionCollection<'a> {
             .flat_map(|b| b.get_return())
             .next()
         {
-            Option::None => unreachable!(),
+            Option::None => _unreachable_panic!(),
             Option::Some(ref expr) => {
                 collection.ret = Some(collection.insert_block(None, expr));
             }
@@ -156,7 +156,7 @@ impl<'a> ExpressionCollection<'a> {
     ) {
         let id = Identifier::new(None, name);
         let sig = match namespace.get_function(name) {
-            Option::None => unreachable!(),
+            Option::None => _unreachable_panic!(),
             Option::Some(arg) => arg.clone(),
         };
         let coll = ExpressionCollection::from_block(name, block, &sig);
