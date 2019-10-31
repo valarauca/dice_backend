@@ -1,5 +1,6 @@
 use super::super::cfgbuilder::{CallStack, ExpressionCollection, HashedExpression};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap};
+use std::collections::btree_map::{Iter};
 
 use super::expr::InlinedExpression;
 
@@ -26,13 +27,18 @@ impl<'a> InlinedCollection<'a> {
     }
     
     /// provides the return expression value
-    pub fn get_return<'b>(&'b self) -> Option<u64> {
+    pub fn get_return(&self) -> Option<u64> {
         self.ret.clone()
     }
 
     /// returns an expression based on its hashed identifier
     pub fn get_expr<'b>(&'b self, inlined_expr: &u64) -> Option<&'b InlinedExpression<'a>> {
         self.expr.get(inlined_expr)
+    }
+
+    /// returns an iterator over the internal btreemap
+    pub fn get_expression_map<'b>(&'b self) -> Iter<'b, u64, InlinedExpression<'a>> {
+        self.expr.iter()
     }
 
     /// inserts a hashed expression, and its InlinedExpression counter part.

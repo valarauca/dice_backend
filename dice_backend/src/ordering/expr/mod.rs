@@ -23,13 +23,14 @@ impl<'a> OrderedExpression<'a> {
     
     /// builds a new expression
     pub fn new(arg: &InlinedExpression<'a>) -> Self {
-        // the compiler should handle this nicely.
-        Option::None.into_iter()
+        match Option::None.into_iter()
             .chain(Op::new(arg).map(Self::from))
             .chain(LiteralValue::new(arg).map(Self::from))
             .chain(StdLibFunc::new(arg).map(Self::from))
-            .next()
-            .unwrap()
+            .next() {
+            Option::None => _unreachable_panic!(),
+            Option::Some(result) => result,
+        }
     }
 }
 impl<'a> AsRef<Hash> for OrderedExpression<'a> {
