@@ -6,59 +6,27 @@ use std::sync::Arc;
 use super::super::rayon::iter::repeat;
 use super::super::rayon::prelude::*;
 
-/// There are only 2 scalar types within our execution environment
-/// booleans & integers.
-///
-/// This structure lets us nicely store these within `8`bytes on x64.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Data {
-    b: u8,
-    i: i32,
-}
-impl From<i32> for Data {
-    fn from(x: i32) -> Data {
-        Data { b: 3, i: x }
-    }
-}
-impl From<bool> for Data {
-    fn from(b: bool) -> Data {
-        Data {
-            b: if b { 1 } else { 0 },
-            i: 0,
-        }
-    }
-}
-impl Data {
-    /// return the boolean bit
-    pub fn get_bool(&self) -> Option<bool> {
-        match self.b {
-            0 => Some(false),
-            1 => Some(true),
-            _ => None,
-        }
-    }
-
-    /// return the integer bit
-    pub fn get_int(&self) -> Option<i32> {
-        match self.b {
-            3 => Some(self.i),
-            _ => None,
-        }
-    }
+#[derive(Clone)]
+pub enum DataElement {
+    Null,
+    Bool(bool),
+    Int(i32),
+    CollofInt(Vec<i32>),
+    CollofBool(Vec<i32>),
 }
 
 /// Tuple Element contains _a_ possible outcome
 /// as well as its likelihood of occuring
 #[derive(Clone)]
 pub struct TupleElement {
-    pub datum: Vec<Data>,
+    pub datum: DataElement,
     pub prob: f64,
 }
 impl TupleElement {
     /// create a constant integer
     pub fn constant_int(x: i32) -> TupleElement {
         TupleElement {
-            datum: vec![Data::from(x)],
+            datum: DataElement::Int(x),
             prob: 1.0,
         }
     }
@@ -66,32 +34,48 @@ impl TupleElement {
     /// create a constant boolean
     pub fn constant_bool(x: bool) -> TupleElement {
         TupleElement {
-            datum: vec![Data::from(x)],
+            datum: DataElement::Bool(x),
             prob: 1.0,
         }
     }
 
-    pub fn sum_across(&self) -> i32 {
-        self.datum
-            .iter()
-            .flat_map(|x| {
-                x.get_int()
-                    .into_iter()
-                    .chain(x.get_bool().map(|b| if b { 1 } else { 0 }))
-            })
-            .sum()
+    fn is_null(&self) -> bool {
+        match &self.datum {
+            &DataElement::Null => true,
+            _ => false,
+        }
     }
 
-    pub fn get_first_index_as_bool(&self) -> bool {
-        if self.datum.len() == 0 {
-            return false;
+    fn sum_across(&self) -> i32 {
+        match &self.datum {
+            &DataElement::CollofInt(ref vec) => {
+                vec.iter().sum()
+            },
+            _ => panic!("type error"),
         }
-        self.datum[0]
-            .get_bool()
-            .into_iter()
-            .chain(self.datum[0].get_int().map(|x| x != 0))
-            .next()
-            .unwrap_or_else(|| false)
+    }
+
+    fn push_coll_int(&mut self, arg: i32) {
+        match &mut self.datum {
+            &mut DataElement::CollofInt(ref mut vec) => {
+                vec.push(arg);
+            },
+            _ => panic!("type error"),
+        }
+    }
+
+    fn get_int(&self) -> i32 {
+        match &self.datum {
+            &DataElement::Int(x) => x,
+            _ => panic!("type error"),
+        }
+    }
+
+    fn get_bool(&self) -> bool {
+        match &self.datum {
+            &DataElement::Bool(b) => b,
+            _ => panic!("type error"),
+        }
     }
 }
 unsafe impl Send for TupleElement {}
@@ -136,7 +120,7 @@ impl ProbabilityDataType {
             } else {
                 for i in DICE_3 {
                     let mut item = arg.clone();
-                    arg.datum.push(Data::from(*i));
+                    arg.push_coll_int(i.clone());
                     arg.prob *= (1.0f64 / 3.0f64);
                     build(depth - 1, &mut item, coll);
                 }
@@ -144,18 +128,12 @@ impl ProbabilityDataType {
         }
         self.expand(move |arg| -> Vec<TupleElement> {
             let mut v = Vec::new();
-            if arg.datum.len() != 1 {
-                return v;
-            }
-            let count = match arg.datum[0].get_int() {
-                Option::Some(count) => count,
-                Option::None => return v,
-            };
-            if count < 1 {
+            let count = arg.get_int();
+            if count <= 0 {
                 return v;
             }
             let mut default = TupleElement {
-                datum: Vec::with_capacity(count as usize),
+                datum: DataElement::CollofInt(Vec::with_capacity(count as usize)),
                 prob: arg.prob.clone(),
             };
             build(count as i32, &mut default, &mut v);
@@ -172,7 +150,7 @@ impl ProbabilityDataType {
             } else {
                 for i in DICE_6 {
                     let mut item = arg.clone();
-                    arg.datum.push(Data::from(*i));
+                    arg.push_coll_int(i.clone());
                     arg.prob *= (1.0f64 / 6.0f64);
                     build(depth - 1, &mut item, coll);
                 }
@@ -181,18 +159,12 @@ impl ProbabilityDataType {
 
         self.expand(move |arg| -> Vec<TupleElement> {
             let mut v = Vec::new();
-            if arg.datum.len() != 1 {
-                return v;
-            }
-            let count = match arg.datum[0].get_int() {
-                Option::Some(count) => count,
-                Option::None => return v,
-            };
-            if count < 1 {
+            let count = arg.get_int();
+            if count <= 0 {
                 return v;
             }
             let mut default = TupleElement {
-                datum: Vec::with_capacity(count as usize),
+                datum: DataElement::CollofInt(Vec::with_capacity(count as usize)),
                 prob: arg.prob.clone(),
             };
             build(count as i32, &mut default, &mut v);
@@ -202,14 +174,14 @@ impl ProbabilityDataType {
 
     pub fn filter(&self, other: ProbabilityDataType) -> ProbabilityDataType {
         self.zip_map(&other, |a, b| -> TupleElement {
-            if a.get_first_index_as_bool() {
+            if a.get_bool() {
                 TupleElement {
                     datum: b.datum.clone(),
                     prob: b.prob,
                 }
             } else {
                 TupleElement {
-                    datum: Vec::new(),
+                    datum: DataElement::Null,
                     prob: b.prob,
                 }
             }
@@ -222,7 +194,7 @@ impl ProbabilityDataType {
         self.map(|arg: &TupleElement| -> TupleElement {
             let value: i32 = arg.sum_across();
             TupleElement {
-                datum: vec![Data::from(value)],
+                datum: DataElement::Int(value),
                 prob: arg.prob,
             }
         })
@@ -252,6 +224,7 @@ impl ProbabilityDataType {
             .into_par_iter()
             .zip(other.data.as_ref().into_par_iter())
             .map(move |a| lambda(a.0, a.1))
+            .filter(move |x| !x.is_null())
             .collect();
         ProbabilityDataType::from(v)
     }
