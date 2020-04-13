@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
-use std::iter::once;
 use std::mem::{replace, ManuallyDrop};
 use std::pin::Pin;
 use std::sync::atomic::{fence, Ordering};
 use std::sync::{Arc, Mutex};
 
+use super::super::rayon::iter::once;
 use super::{ProbabilityDataType, TupleElement};
 
 /// ProbabilityFuture will eventually return a ProbabilityDataType

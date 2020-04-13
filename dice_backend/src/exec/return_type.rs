@@ -1,12 +1,15 @@
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::marker::{Send, Sync};
 use std::sync::Arc;
+
+use super::super::parser_output::TypeData;
 
 use super::super::rayon::iter::repeat;
 use super::super::rayon::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DataElement {
     Null,
     Bool(bool),
@@ -39,6 +42,19 @@ impl TupleElement {
         }
     }
 
+    // for sorting internal buckets, does nothing for scalars
+    fn sort_internal_safe(&mut self) {
+        match &mut self.datum {
+            &mut DataElement::Null | &mut DataElement::Bool(_) | &mut DataElement::Int(_) => {}
+            &mut DataElement::CollofInt(ref mut v) => {
+                v.sort_unstable();
+            }
+            &mut DataElement::CollofBool(ref mut v) => {
+                v.sort_unstable();
+            }
+        }
+    }
+
     fn is_null(&self) -> bool {
         match &self.datum {
             &DataElement::Null => true,
@@ -48,9 +64,7 @@ impl TupleElement {
 
     fn sum_across(&self) -> i32 {
         match &self.datum {
-            &DataElement::CollofInt(ref vec) => {
-                vec.iter().sum()
-            },
+            &DataElement::CollofInt(ref vec) => vec.iter().sum(),
             _ => panic!("type error"),
         }
     }
@@ -59,7 +73,7 @@ impl TupleElement {
         match &mut self.datum {
             &mut DataElement::CollofInt(ref mut vec) => {
                 vec.push(arg);
-            },
+            }
             _ => panic!("type error"),
         }
     }
@@ -77,9 +91,69 @@ impl TupleElement {
             _ => panic!("type error"),
         }
     }
+
+    fn split(self) -> (DataElement, f64) {
+        (self.datum, self.prob)
+    }
+
+    fn get_type(&self) -> Option<TypeData> {
+        match &self.datum {
+            &DataElement::Null => None,
+            &DataElement::Bool(_) => Some(TypeData::Bool),
+            &DataElement::Int(_) => Some(TypeData::Int),
+            &DataElement::CollofInt(_) => Some(TypeData::CollectionOfInt),
+            &DataElement::CollofBool(_) => Some(TypeData::CollectionOfBool),
+        }
+    }
 }
 unsafe impl Send for TupleElement {}
 unsafe impl Sync for TupleElement {}
+
+// tree_push acts like a `fold` system where we can merge
+// incoming data types
+fn tree_push(
+    tree: BTreeMap<DataElement, f64>,
+    element: TupleElement,
+) -> BTreeMap<DataElement, f64> {
+    let mut element = element;
+    element.sort_internal_safe();
+    let (datum, prob) = element.split();
+
+    let mut tree = tree;
+    match tree.get_mut(&datum) {
+        Option::Some(p) => {
+            *p += prob;
+            return tree;
+        }
+        _ => {}
+    };
+    tree.insert(datum, prob);
+    tree
+}
+
+// tree_merge joins together 2 partial BTree's this happens
+// as a rayon concurrent job returns our single thread.
+fn tree_merge(
+    tree1: BTreeMap<DataElement, f64>,
+    tree2: BTreeMap<DataElement, f64>,
+) -> BTreeMap<DataElement, f64> {
+    let (mut big_tree, small_tree) = if tree1.len() >= tree2.len() {
+        (tree1, tree2)
+    } else {
+        (tree2, tree1)
+    };
+    for (k, v) in small_tree {
+        match big_tree.get_mut(&k) {
+            Option::Some(p) => {
+                *p += v;
+                continue;
+            }
+            _ => {}
+        };
+        big_tree.insert(k, v);
+    }
+    big_tree
+}
 
 /// ProbabilityDataType represents the what we can eventually return
 #[derive(Clone)]
@@ -87,28 +161,52 @@ pub struct ProbabilityDataType {
     pub data: Arc<[TupleElement]>,
 }
 impl ProbabilityDataType {
-    /// builds output from inputs
-    pub fn new<I>(x: I) -> ProbabilityDataType
-    where
-        I: Iterator<Item = TupleElement>,
-    {
-        let size_hint = match x.size_hint() {
-            (lb, Option::Some(ub)) => {
-                if ub >= lb {
-                    ub
-                } else {
-                    lb
+    fn is_homogenous(&self) -> Option<TypeData> {
+        let mut v: Option<TypeData> = None;
+        for item in self.data.iter().map(|x| x.get_type()) {
+            match item {
+                Option::None => return None,
+                Option::Some(kind) => {
+                    match v {
+                        Option::None => {
+                            // should only happy initially
+                            v = Some(kind);
+                            continue;
+                        }
+                        Option::Some(x) => {
+                            if x != kind {
+                                return None;
+                            }
+                        }
+                    };
                 }
-            }
-            (lb, Option::None) => lb,
-        };
-        let mut v = Vec::with_capacity(size_hint);
-        let mut x = x;
-        for item in x {
-            v.push(item);
+            };
         }
+        return v;
+    }
+
+    /// builds output from inputs
+    pub fn new<P>(x: P) -> ProbabilityDataType
+    where
+        P: IntoParallelIterator<Item = TupleElement>,
+    {
+        let output = x
+            .into_par_iter()
+            .filter(|arg| !arg.is_null())
+            .fold(BTreeMap::<DataElement, f64>::new, tree_push)
+            .reduce_with(tree_merge);
+        let col = match output {
+            Option::None => Vec::new(),
+            Option::Some(tree) => {
+                let mut vec = Vec::<TupleElement>::with_capacity(tree.len());
+                for (k, v) in tree.into_iter() {
+                    vec.push(TupleElement { datum: k, prob: v });
+                }
+                vec
+            }
+        };
         ProbabilityDataType {
-            data: Arc::from(v.into_boxed_slice()),
+            data: Arc::from(col.into_boxed_slice()),
         }
     }
 
@@ -173,17 +271,14 @@ impl ProbabilityDataType {
     }
 
     pub fn filter(&self, other: ProbabilityDataType) -> ProbabilityDataType {
-        self.zip_map(&other, |a, b| -> TupleElement {
+        self.zip_map(&other, |a, b| -> Option<TupleElement> {
             if a.get_bool() {
-                TupleElement {
+                Some(TupleElement {
                     datum: b.datum.clone(),
                     prob: b.prob,
-                }
+                })
             } else {
-                TupleElement {
-                    datum: DataElement::Null,
-                    prob: b.prob,
-                }
+                None
             }
         })
     }
@@ -205,36 +300,27 @@ impl ProbabilityDataType {
         F: Sync + Send + Fn(&TupleElement) -> I,
         I: IntoParallelIterator<Item = TupleElement>,
     {
-        let v: Vec<TupleElement> = self
-            .data
-            .as_ref()
-            .into_par_iter()
-            .flat_map(lambda)
-            .collect();
-        ProbabilityDataType::from(v)
+        ProbabilityDataType::new(self.data.as_ref().into_par_iter().flat_map(lambda))
     }
 
     fn zip_map<F>(&self, other: &ProbabilityDataType, lambda: F) -> ProbabilityDataType
     where
-        F: Sync + Send + Fn(&TupleElement, &TupleElement) -> TupleElement,
+        F: Sync + Send + Fn(&TupleElement, &TupleElement) -> Option<TupleElement>,
     {
-        let v: Vec<TupleElement> = self
-            .data
-            .as_ref()
-            .into_par_iter()
-            .zip(other.data.as_ref().into_par_iter())
-            .map(move |a| lambda(a.0, a.1))
-            .filter(move |x| !x.is_null())
-            .collect();
-        ProbabilityDataType::from(v)
+        ProbabilityDataType::new(
+            self.data
+                .as_ref()
+                .into_par_iter()
+                .zip_eq(other.data.as_ref().into_par_iter())
+                .filter_map(move |a| lambda(a.0, a.1)),
+        )
     }
 
     fn map<F>(&self, lambda: F) -> ProbabilityDataType
     where
         F: Sync + Send + Fn(&TupleElement) -> TupleElement,
     {
-        let v: Vec<TupleElement> = self.data.as_ref().into_par_iter().map(lambda).collect();
-        ProbabilityDataType::from(v)
+        ProbabilityDataType::new(self.data.as_ref().into_par_iter().map(lambda))
     }
 }
 impl From<Vec<TupleElement>> for ProbabilityDataType {
