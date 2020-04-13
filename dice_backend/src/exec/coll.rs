@@ -6,7 +6,7 @@ use std::sync::Arc;
 use super::super::rayon::ThreadPool;
 
 use super::super::cfgbuilder::{ExpressionCollection, HashedExpression, Identifier};
-use super::super::parser_output::Literal;
+use super::super::parser_output::{Literal,Operation,TypeData};
 use super::{Data, ProbabilityDataType, ProbabilityFuture, Stack, TupleElement};
 
 #[derive(Default)]
@@ -68,8 +68,16 @@ impl FutureTracker {
                         ProbabilityFuture::lambda(move || left.get_data().filter(right.get_data()))
                     }
                     _ => {
-                        // need to do weird function context changes
-                        panic!()
+
+                        // resolve function arguments
+                        let args: Vec<ProbabilityFuture> = args.iter().map(|arg| self.get_expr(coll, stack, *arg)).collect();
+
+                        // modify stack
+                        stack.push_frame(ident.clone());
+                        // acquire context
+                        let ctx = coll.get_function_context(ident).unwrap();
+                        let func_return = ctx.get_return().unwrap();
+                        self.build(ctx, stack, func_return)
                     }
                 }
             }
@@ -113,9 +121,24 @@ impl FutureTracker {
                 self.insert_future(hash, &future);
                 future
             }
-            &HashedExpression::Op(ref left_expr, ref op, ref right_expr, _) => {
-                let left_expr = self.get_expr(coll, stack, left_expr);
-                let right_expr = self.get_expr(coll, stack, right_expr);
+            &HashedExpression::Op(ref left_expr, ref op, ref right_expr, ref kind) => {
+                let l_expr = coll.get_expr(stack.get_current_frame(), left_expr).unwrap();
+                let l_kind = l_expr.get_type();
+                let r_expr = coll.get_expr(stack.get_current_frame(), right_expr).unwrap();
+                let r_kind = r_expr.get_type();
+                match (l_kind, r_kind, *op, *kind) {
+                    (TypeData::Bool, TypeData::Bool, Operation::And, TypeData::Bool) => {
+                        panic!("TODO logical and");
+                    },
+                    (TypeData::Bool, TypeData::Bool, Operation::Or, TypeData::Bool) => {
+                        panic!("TODO logical or")
+                    },
+                    (TypeData::Int, TypeData::Int, Operation::Add, TypeData::Int) => {
+                        // logical addition
+                    },
+                    (TypeData::Int,TypeData::Int, Operation::Sub, TypeData::Int) => {
+                    },
+                }
             }
             &HashedExpression::ExternalConstant(ref ident, _) => panic!(),
             &HashedExpression::Var(ref ident, _) => panic!(),
