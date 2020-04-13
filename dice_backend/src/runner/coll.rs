@@ -1,6 +1,6 @@
 use super::super::cfgbuilder::{CallStack, ExpressionCollection, HashedExpression};
-use std::collections::{BTreeMap};
-use std::collections::btree_map::{Iter};
+use std::collections::btree_map::Iter;
+use std::collections::BTreeMap;
 
 use super::expr::InlinedExpression;
 
@@ -25,7 +25,7 @@ impl<'a> InlinedCollection<'a> {
         ::std::mem::replace(&mut coll.ret, Some(return_expr));
         coll
     }
-    
+
     /// provides the return expression value
     pub fn get_return(&self) -> Option<u64> {
         self.ret.clone()

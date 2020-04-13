@@ -1,8 +1,7 @@
-
 /// Ordering concerns ordering data
-#[derive(Default,Copy,Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ordering {
-    op_order: u64
+    op_order: u64,
 }
 impl AsRef<Ordering> for Ordering {
     #[inline(always)]
@@ -16,11 +15,10 @@ impl AsMut<Ordering> for Ordering {
         self
     }
 }
-impl OrderingOp for Ordering { }
+impl OrderingOp for Ordering {}
 
 /// Handles ordering operation values
 pub trait OrderingOp: AsRef<Ordering> + AsMut<Ordering> {
-
     /// set allows for setting an ordering value
     fn set_ordering(&mut self, value: u64) {
         self.as_mut().op_order = value;

@@ -7,9 +7,9 @@ use super::super::super::runner::InlinedExpression;
 /// This hash value is actually derived from `InlinedExpression`
 /// and is as of this pass actually just an opaque value associated
 /// with the underlying term.
-#[derive(Copy,Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Hash {
-    hash_value: u64
+    hash_value: u64,
 }
 impl<'a, 'b> From<&'b InlinedExpression<'a>> for Hash {
     fn from(arg: &'b InlinedExpression<'a>) -> Hash {
@@ -23,7 +23,7 @@ impl AsRef<Hash> for Hash {
         self
     }
 }
-impl HashOp for Hash { }
+impl HashOp for Hash {}
 
 /// HashOp is a trait which implements most of the interesting
 /// effects of the hash comparisons.

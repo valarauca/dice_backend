@@ -1,4 +1,3 @@
-
 mod op;
 pub use self::op::*;
 mod stdlibfunc;
@@ -13,21 +12,22 @@ pub use self::hash::*;
 use super::super::runner::InlinedExpression;
 
 /// Expressions with their order given
-#[derive(Clone,Debug,PartialEq,Eq,PartialOrd,Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum OrderedExpression<'a> {
     StdLibFunc(StdLibFunc<'a>),
     Operation(Op),
-    Constant(LiteralValue<'a>),  
+    Constant(LiteralValue<'a>),
 }
 impl<'a> OrderedExpression<'a> {
-    
     /// builds a new expression
     pub fn new(arg: &InlinedExpression<'a>) -> Self {
-        match Option::None.into_iter()
+        match Option::None
+            .into_iter()
             .chain(Op::new(arg).map(Self::from))
             .chain(LiteralValue::new(arg).map(Self::from))
             .chain(StdLibFunc::new(arg).map(Self::from))
-            .next() {
+            .next()
+        {
             Option::None => _unreachable_panic!(),
             Option::Some(result) => result,
         }
@@ -63,8 +63,8 @@ impl<'a> AsMut<Ordering> for OrderedExpression<'a> {
         }
     }
 }
-impl<'a> HashOp for OrderedExpression<'a> { }
-impl<'a> OrderingOp for OrderedExpression<'a> { }
+impl<'a> HashOp for OrderedExpression<'a> {}
+impl<'a> OrderingOp for OrderedExpression<'a> {}
 impl<'a> From<Op> for OrderedExpression<'a> {
     #[inline(always)]
     fn from(arg: Op) -> Self {

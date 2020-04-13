@@ -1,12 +1,11 @@
+use super::hash::{Hash, HashOp};
+use super::order::{Ordering, OrderingOp};
 
-use super::order::{Ordering,OrderingOp};
-use super::hash::{Hash,HashOp};
-
-use super::super::super::parser_output::{Operation};
+use super::super::super::parser_output::Operation;
 use super::super::super::runner::InlinedExpression;
 
 /// Op contains information about an operation.
-#[derive(Clone,PartialEq,Eq,PartialOrd,Ord,Hash,Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Op {
     pub left: u64,
     pub op: Operation,
@@ -15,20 +14,19 @@ pub struct Op {
     hash: Hash,
 }
 impl Op {
-
     /// attempts to build an operation from an inlined expression
     pub fn new<'a>(arg: &InlinedExpression<'a>) -> Option<Self> {
         match arg {
             &InlinedExpression::Operation(ref left, ref op, ref right) => {
                 let hash = Hash::from(arg);
-                Some(Self{
+                Some(Self {
                     left: left.clone(),
                     op: op.clone(),
                     right: right.clone(),
                     order: Ordering::default(),
                     hash: hash,
                 })
-            },
+            }
             _ => None,
         }
     }
@@ -39,7 +37,7 @@ impl AsRef<Hash> for Op {
         &self.hash
     }
 }
-impl HashOp for Op { }
+impl HashOp for Op {}
 impl AsRef<Ordering> for Op {
     #[inline(always)]
     fn as_ref<'b>(&'b self) -> &'b Ordering {
@@ -52,6 +50,4 @@ impl AsMut<Ordering> for Op {
         &mut self.order
     }
 }
-impl OrderingOp for Op { }
-
-
+impl OrderingOp for Op {}

@@ -163,6 +163,19 @@ impl<'a> Namespace<'a> {
             },
         );
         self.functions.insert(
+            "count",
+            FunctionDeclaration {
+                stdlib: true,
+                name: "count",
+                args: vec![("collection_to_sum_over", TypeData::CollectionOfBool)]
+                    .into_boxed_slice(),
+                ret: TypeData::Int,
+                body: Statements {
+                    data: vec![].into_boxed_slice(),
+                },
+            },
+        );
+        self.functions.insert(
             "sum",
             FunctionDeclaration {
                 stdlib: true,

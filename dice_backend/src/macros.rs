@@ -1,5 +1,4 @@
-
-/// _unreachable_panic is macro intended to take the place of 
+/// _unreachable_panic is macro intended to take the place of
 /// 'panic!' and 'unreachable!' within the code base. Its job
 /// is to hint to the compiler that certain branches are
 /// unreachable.
@@ -36,4 +35,3 @@ macro_rules! _unreachable_panic {
         }
     };
 }
-
