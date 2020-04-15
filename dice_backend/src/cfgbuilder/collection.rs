@@ -81,6 +81,11 @@ impl<'a> ExpressionCollection<'a> {
             .unwrap_or(false)
     }
 
+    /// returns an iterator of all variables within this scope
+    pub fn get_vars<'b>(&'b self) -> ::std::collections::btree_map::Iter<'b, Identifier, u64> {
+        self.vars.iter()
+    }
+
     /// get variable returns the hashed expression which defines the variable.
     pub fn get_variable<'b>(&'b self, id: &Identifier) -> Option<&'b HashedExpression<'a>> {
         // try to convert ID into a namespace

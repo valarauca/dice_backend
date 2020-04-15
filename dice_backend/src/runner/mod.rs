@@ -54,18 +54,18 @@ analyze reroll_1(roll(MAX,MIN,10));
     // the "max" local which is our first argument should be erased
     // down to the constant, so let us test that
     match coll.get_expr(&return_expr_args[0]) {
-        Option::Some(InlinedExpression::Constant(Literal::Number(6))) => {}
+        Option::Some(InlinedExpression::ConstantInt(6)) => {}
         anything_else => panic!("expected a constant number, found: {:?}", anything_else),
     };
     // the MIN is a constant which should just always exist
     match coll.get_expr(&return_expr_args[1]) {
-        Option::Some(InlinedExpression::Constant(Literal::Number(1))) => {}
+        Option::Some(InlinedExpression::ConstantInt(1)) => {}
         anything_else => panic!("expected a constant number, found: {:?}", anything_else),
     };
     // the 3^rd argument should be a filter ooperation
     // let us resolve that
     let (left, right) = match coll.get_expr(&return_expr_args[2]) {
-        Option::Some(InlinedExpression::Operation(ref left, Operation::Equal, ref right)) => {
+        Option::Some(InlinedExpression::Operation(ref left, Operation::Equal, ref right, TypeData::CollectionOfBool)) => {
             (left.clone(), right.clone())
         }
         anything_else => panic!(
@@ -98,7 +98,7 @@ analyze reroll_1(roll(MAX,MIN,10));
     assert_eq!(left, initial_args[1].clone());
     // last step, ensure that value `10` exists.
     match coll.get_expr(&initial_args[2]) {
-        Option::Some(InlinedExpression::Constant(Literal::Number(10))) => {
+        Option::Some(InlinedExpression::ConstantInt(10)) => {
             // yay!
         }
         anything_else => panic!("expected constant of 10, found: {:?}", anything_else),

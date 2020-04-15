@@ -1,4 +1,5 @@
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 use super::super::cfgbuilder::{CallStack, ExpressionCollection, HashedExpression, Identifier};
 use super::super::parser_output::{Literal, Operation, TypeData};
@@ -10,8 +11,9 @@ use super::coll::InlinedCollection;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InlinedExpression<'a> {
     StdLibFunc(&'a str, Box<[u64]>),
-    Operation(u64, Operation, u64),
-    Constant(Literal<'a>),
+    Operation(u64, Operation, u64, TypeData),
+    ConstantInt(i32),
+    ConstantBool(bool),
 }
 impl<'a> InlinedExpression<'a> {
     /// returns the hash of the expression
@@ -31,9 +33,28 @@ impl<'a> InlinedExpression<'a> {
             (hash, Option::None) => hash,
         };
         let output = match expr {
-            &HashedExpression::ConstantValue(ref literal, _) => {
-                Some(InlinedExpression::Constant(literal.clone()))
-            }
+            &HashedExpression::ConstantValue(Literal::EnvirBool(ref envir_name), _) => {
+                let b = ::std::env::vars()
+                    .filter(|(name,_)| envir_name == name)
+                    .flat_map(|(_,var)| bool::from_str(&var).ok())
+                    .next()
+                    .expect(&format!("could not fine value {} in environment", envir_name));
+                Some(InlinedExpression::ConstantBool(b))
+            },
+            &HashedExpression::ConstantValue(Literal::EnvirNumber(ref envir_name), _) => {
+                let i = ::std::env::vars()
+                    .filter(|(name,_)| envir_name == name)
+                    .flat_map(|(_,var)| i32::from_str(&var).ok())
+                    .next()
+                    .expect(&format!("could not fine value {} in environment", envir_name));
+                Some(InlinedExpression::ConstantInt(i))
+            },
+            &HashedExpression::ConstantValue(Literal::Number(i), _) => {
+                Some(InlinedExpression::ConstantInt(i as i32))
+            },
+            &HashedExpression::ConstantValue(Literal::Boolean(b),_) => {
+                Some(InlinedExpression::ConstantBool(b))
+            },
             &HashedExpression::ExternalConstant(ref id, _) | &HashedExpression::Var(ref id, _) => {
                 // resolve the expression that defines the variable
                 // convert that recursively
@@ -51,10 +72,10 @@ impl<'a> InlinedExpression<'a> {
                     (Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref left),TypeData::Bool)),Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref right),TypeData::Bool))) => {
                         match (out, op) {
                             (TypeData::Bool, Operation::And) => {
-                                Some(InlinedExpression::Constant(Literal::Boolean(left & right)))
-                             },
-                             (TypeData::Bool, Operation::Or) => {
-                                Some(InlinedExpression::Constant(Literal::Boolean(left | right)))
+                                Some(InlinedExpression::ConstantBool(left & right))
+                            },
+                            (TypeData::Bool, Operation::Or) => {
+                                Some(InlinedExpression::ConstantBool(left | right))
                              },
                              anything_else => _unreachable_panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
                         }
@@ -62,37 +83,37 @@ impl<'a> InlinedExpression<'a> {
                     (Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref left),TypeData::Int)),Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref right),TypeData::Int))) => {
                         match (out, op) {
                          (TypeData::Int, Operation::Add) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left + right)))
+                             Some(InlinedExpression::ConstantInt(*left as i32 + *right as i32))
                          },
                          (TypeData::Int, Operation::Sub) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left - right)))
+                             Some(InlinedExpression::ConstantInt(*left as i32 - *right as i32))
                          },
                          (TypeData::Int, Operation::Mul) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left * right)))
+                             Some(InlinedExpression::ConstantInt(*left as i32 * *right as i32))
                          },
                          (TypeData::Int, Operation::Div) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left / right)))
+                             Some(InlinedExpression::ConstantInt(*left as i32 / *right as i32))
                          },
                          (TypeData::Int, Operation::Or) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left | right)))
+                             Some(InlinedExpression::ConstantInt(*left as i32 | *right as i32))
                          },
                          (TypeData::Int, Operation::And) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left & right)))
+                             Some(InlinedExpression::ConstantInt(*left as i32 & *right as i32))
                          },
                          (TypeData::Bool, Operation::Equal) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left == right)))
+                             Some(InlinedExpression::ConstantBool(*left == *right))
                          },
                          (TypeData::Bool, Operation::GreaterThan) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left > right)))
+                             Some(InlinedExpression::ConstantBool(*left > *right))
                          },
                          (TypeData::Bool, Operation::LessThan) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left < right)))
+                             Some(InlinedExpression::ConstantBool(*left < *right))
                          },
                          (TypeData::Bool, Operation::GreaterThanEqual) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left >= right)))
+                             Some(InlinedExpression::ConstantBool(*left >= *right))
                          },
                          (TypeData::Bool, Operation::LessThanEqual) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left <= right)))
+                             Some(InlinedExpression::ConstantBool(*left <= *right))
                          },
                          anything_else => _unreachable_panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
                         }
@@ -100,7 +121,7 @@ impl<'a> InlinedExpression<'a> {
                     (Option::Some(ref left), Option::Some(ref right)) => {
                         let left = InlinedExpression::new(left, stack, coll).get_hash();
                         let right = InlinedExpression::new(right, stack, coll).get_hash();
-                        Some(InlinedExpression::Operation(left, op, right))
+                        Some(InlinedExpression::Operation(left, op, right, out))
                     },
                     anything_else => _unreachable_panic!("illegal operation. Should be caught by type checker. {:?}", anything_else)
                 }
