@@ -71,10 +71,10 @@ impl<'a> BlockExpression<'a> {
                 match (left.get_type()?, right.get_type()?) {
                     (TypeData::Int, TypeData::Int) => TypeData::Int,
                     (TypeData::Int, TypeData::CollectionOfInt) => TypeData::CollectionOfInt,
-                    (TypeData::CollectionOfInt, TypeData::Int) => TypeData::Int,
+                    (TypeData::CollectionOfInt, TypeData::Int) => TypeData::CollectionOfInt,
                     (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
                         TypeData::CollectionOfInt
-                    }
+                    },
                     (left_type, right_type) => {
                         return Err(format!(
                             "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",

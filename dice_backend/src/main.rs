@@ -26,6 +26,7 @@ mod runner;
 mod seahasher;
 mod syntaxhelper;
 mod validator;
+mod exec;
 
 fn main() {
     let matches = App::new("foxhole")

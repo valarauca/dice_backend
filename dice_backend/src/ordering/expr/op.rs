@@ -12,7 +12,7 @@ pub struct Op {
     pub left: u64,
     pub op: Operation,
     pub right: u64,
-    kind: TypeData,
+    pub kind: TypeData,
     order: Ordering,
     hash: Hash,
     read: ReadTracking,

@@ -23,7 +23,11 @@ impl<'a> OrderingCollection<'a> {
         self.ret
     }
 
-    pub fn get_expr<'b>(&'b self) -> Iter<'b, u64, OrderedExpression> {
+    pub fn get_expr<'b>(&'b self, arg: &u64) -> &'b OrderedExpression<'a>> {
+        self.data.get(arg).unwrap()
+    }
+
+    pub fn get_exprs<'b>(&'b self) -> Iter<'b, u64, OrderedExpression<'a>> {
         self.data.iter()
     }
 
@@ -74,38 +78,3 @@ impl<'a> OrderingCollection<'a> {
 }
 
 
-/*
-pub fn order_expressions<'a>(
-    arg: &InlinedCollection<'a>
-) {
-
-    // build a map of (identifier, expression)
-    let mut expr_map: BTreeMap<u64,OrderedExpression<'a>> = arg
-        .get_expression_map()
-        .map(|(key,value)| (*key, OrderedExpression::new(&value)))
-        .collect();
-
-   
-    // process the map of (identifier, expression)
-    // to reduce it into (identifier, requirement)
-    let taking_lambda = |tup: (&u64,&OrderedExpression<'a>)| -> Vec<(u64,u64)> {
-        tup.1.get_source_sink()
-    };
-
-    // build an array of (hash, requirement_hash)
-    let tracking: Vec<(u64,u64)> = expr_map
-        .iter()
-        .flat_map(taking_lambda)
-        .collect();
-
-    for (sink,source) in tracking {
-        match expr_map.get_mut(&source) {
-            Option::None => {
-                panic!("expression should exist, it was just inserted")
-            },
-            Option::Some(ref mut op) => {
-            }
-        }
-    }
-}
-*/

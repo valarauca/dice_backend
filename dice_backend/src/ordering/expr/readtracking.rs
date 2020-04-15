@@ -51,6 +51,10 @@ pub trait ReadTrackingOp: AsMut<ReadTracking> + AsRef<ReadTracking> {
         self.as_ref().sinks.len()
     }
 
+    fn get_sinks<'a>(&'a self) -> &'a [u64] {
+        self.as_ref().sinks.as_slice()
+    }
+
     /// return the number of expressions which this expression reads
     fn get_num_sources(&self) -> usize {
         self.as_ref().sources.len()
