@@ -18,7 +18,7 @@ mod macros;
 pub mod parser_output;
 mod value;
 
-//mod cfgbuilder;
+mod cfgbuilder;
 mod formatter;
 mod namespace;
 //mod ordering;

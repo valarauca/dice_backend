@@ -85,7 +85,7 @@ impl<'a> BlockExpression<'a> {
             }
             Operation::Equal
             | Operation::NotEqual => match (left.get_type()?,right.get_type()?) {
-                (TypeData::Int, TypeDataInt) => TypeData::Bool,
+                (TypeData::Int, TypeData::Int) => TypeData::Bool,
                 (TypeData::Bool, TypeData::Bool) => TypeData::Bool,
                 (TypeData::CollectionOfInt, TypeData::Int) |
                 (TypeData::Int, TypeData::CollectionOfInt) |

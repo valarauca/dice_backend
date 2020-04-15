@@ -9,6 +9,20 @@ mod namespace;
 pub use self::namespace::Namespace;
 
 #[test]
+fn test_simple_stuff() {
+    use super::parser_output::AbstractSyntaxTree;
+    let trivial_program = "analyze ( 1 != roll_d6(10) );";
+    let ast = match AbstractSyntaxTree::parse(trivial_program) {
+        Ok(ast) => ast,
+        Err(e) => panic!("ast error: {:?}", e),
+    };
+    let namespace = match Namespace::new(&ast) {
+        Ok(namespace) => namespace,
+        Err(e) => panic!("namespace error: {:?}", e),
+    };
+}
+
+#[test]
 fn test_namspace_with_trivial_program_1() {
     use super::parser_output::AbstractSyntaxTree;
 
