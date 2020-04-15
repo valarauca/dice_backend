@@ -127,4 +127,64 @@ analyze sum(reroll_1(roll(MAX,MIN,10)));
         Option::Some(HashedExpression::ConstantValue(Literal::Number(10), TypeData::Int)) => {}
         anything_else => panic!("Expected constant value. Found: {:?}", anything_else),
     };
+
+    /*
+     * Get our `analyze` statement and step into the structure
+     * here we re-veify that we're returning `sum`
+     *
+     */
+    let (id, args, kind) = match cfgcoll.get_return() {
+        Option::Some(HashedExpression::Func(ref id, ref args, ref kind)) => {
+            assert_eq!(cfgcoll.get_function_name(id), Some("sum"));
+            assert!(cfgcoll.is_function_stdlib(id));
+            assert_eq!(args.len(), 1);
+            assert!(kind.clone() == TypeData::Int);
+            (id.clone(), args.clone(), kind.clone())
+        }
+        anything_else => panic!("Expected a function. Found: {:?}", anything_else),
+    };
+    /*
+     * we again chase `sum` into `re_roll1`
+     *
+     */
+    let (id, args, kind) = match cfgcoll.get_expr(None, &args[0]) {
+        Option::Some(HashedExpression::Func(ref id, ref args, ref kind)) => {
+            // returns a collection of int
+            assert_eq!(kind.clone(), TypeData::CollectionOfInt);
+            // named reroll 1
+            assert_eq!(cfgcoll.get_function_name(id), Some("reroll_1"));
+            // not in stdlib
+            assert!( !cfgcoll.is_function_stdlib(id)); 
+            // has 1 argument
+            assert_eq!(args.len(), 1);
+            (id.clone(), args.clone(), kind.clone())
+        }
+        anything_else => panic!("Expected a function. Found: {:?}", anything_else),
+    };
+
+    /*
+     * Changing context!!!!
+     *
+     * Here we step into the `reroll_1` function
+     *
+     */
+    let ctx = match cfgcoll.get_function_context(&id) {
+        Option::Some(x) => x,
+        _ => panic!("expected a function context"),
+    };
+    /* 
+     * Our returned result flows from `join`
+     *
+     */
+    let (id, args, kind) = match ctx.get_return() {
+        Option::Some(HashedExpression::Func(ref id, ref args, ref kind)) => {
+            // strange?
+            assert_eq!(cfgcoll.get_function_name(id), Some("join"));
+            assert!(cfgcoll.is_function_stdlib(id));
+            assert_eq!(args.len(), 2);
+            assert!(kind.clone() == TypeData::CollectionOfInt);
+            (id.clone(), args.clone(), kind.clone())
+        }
+        anything_else => panic!("Expected a function. Found: {:?}", anything_else),
+    };
 }
