@@ -9,15 +9,6 @@ use super::super::parser_output::TypeData;
 use super::super::rayon::iter::repeat;
 use super::super::rayon::prelude::*;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DataElement {
-    Null,
-    Bool(bool),
-    Int(i32),
-    CollofInt(Vec<i32>),
-    CollofBool(Vec<i32>),
-}
-
 /// Tuple Element contains _a_ possible outcome
 /// as well as its likelihood of occuring
 #[derive(Clone)]
@@ -108,52 +99,6 @@ impl TupleElement {
 }
 unsafe impl Send for TupleElement {}
 unsafe impl Sync for TupleElement {}
-
-// tree_push acts like a `fold` system where we can merge
-// incoming data types
-fn tree_push(
-    tree: BTreeMap<DataElement, f64>,
-    element: TupleElement,
-) -> BTreeMap<DataElement, f64> {
-    let mut element = element;
-    element.sort_internal_safe();
-    let (datum, prob) = element.split();
-
-    let mut tree = tree;
-    match tree.get_mut(&datum) {
-        Option::Some(p) => {
-            *p += prob;
-            return tree;
-        }
-        _ => {}
-    };
-    tree.insert(datum, prob);
-    tree
-}
-
-// tree_merge joins together 2 partial BTree's this happens
-// as a rayon concurrent job returns our single thread.
-fn tree_merge(
-    tree1: BTreeMap<DataElement, f64>,
-    tree2: BTreeMap<DataElement, f64>,
-) -> BTreeMap<DataElement, f64> {
-    let (mut big_tree, small_tree) = if tree1.len() >= tree2.len() {
-        (tree1, tree2)
-    } else {
-        (tree2, tree1)
-    };
-    for (k, v) in small_tree {
-        match big_tree.get_mut(&k) {
-            Option::Some(p) => {
-                *p += v;
-                continue;
-            }
-            _ => {}
-        };
-        big_tree.insert(k, v);
-    }
-    big_tree
-}
 
 /// ProbabilityDataType represents the what we can eventually return
 #[derive(Clone)]
