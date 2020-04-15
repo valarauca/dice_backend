@@ -84,7 +84,21 @@ impl<'a> BlockExpression<'a> {
                 }
             }
             Operation::Equal
-            | Operation::GreaterThan
+            | Operation::NotEqual => match (left.get_type()?,right.get_type()?) {
+                (TypeData::Int, TypeDataInt) => TypeData::Bool,
+                (TypeData::Bool, TypeData::Bool) => TypeData::Bool,
+                (TypeData::CollectionOfInt, TypeData::Int) |
+                (TypeData::Int, TypeData::CollectionOfInt) |
+                (TypeData::Bool,TypeData::CollectionOfBool) |
+                (TypeData::CollectionOfBool,TypeData::Bool) => TypeData::CollectionOfBool,
+                (left_type, right_type) => {
+                    return Err(format!(
+                        "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
+                        left, op, right, left_type, op, right_type
+                    ))
+                }
+            }
+            Operation::GreaterThan
             | Operation::LessThan
             | Operation::GreaterThanEqual
             | Operation::LessThanEqual => match (left.get_type()?, right.get_type()?) {

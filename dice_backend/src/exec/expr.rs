@@ -14,36 +14,75 @@ pub struct Event {
     pub datum: Datum,
     pub prob: f64,
 }
-
-pub struct PartialApp {
-    arg: Box<dyn Fn(Box<dyn IntoIterator<Item=Event>>)->Box<dyn IntoIterator<Item=Event>>>
+impl Event {
+    pub fn new_int(x: i32) -> Event {
+        Event {
+            datum: Datum::Int(x),
+            prob: 1.0f64,
+        }
+    }
+    pub fn new_bool(x: bool) -> Event {
+        Event {
+            datum: Datum::Bool(x),
+            prob: 1.0f64,
+        }
+    }
 }
 
-pub enum PartialApplication {
-    Zero(Box<dyn Fn() -> Box<dyn IntoIterator<Item=Event>>>),
-    One(Box<dyn Fn(Box<dyn IntoIterator<Item=Event>>) -> Box<dyn IntoIterator<Item=Event>>>)
+pub struct Prob {
+    pub data: Vec<Event>,
+}
+impl From<Event> for Prob {
+    fn from(e: Event) -> Prob {
+        Prob {
+            data: vec![e],
+        }
+    }
+}
+
+pub enum PartialApp {
+    Zero(Box<dyn Fn() -> Prob>),
+    One(Box<dyn Fn(Prob) -> Prob>),
+    Two(Box<dyn Fn(Prob,Prob) -> Prob>),
+    Three(Box<dyn Fn(Prob,Prob,Prob) -> Prob>)
+}
+impl PartialApp {
+    fn new_zero<F>(lambda: F) -> Self
+    where F: Fn() -> Prob + 'static
+    {
+        PartialApp::Zero(Box::new(lambda))
+    }
 }
 
 pub fn partial_application<'a>(
     coll: &OrderingCollection<'a>,
-    expr: &OrderedExpression<'a>) -> PartialApplication {
+    expr: &OrderedExpression<'a>) -> PartialApp {
     match expr {
         &OrderedExpression::ConstantBool(ref b) => {
-            PartialApplication::Zero(Box::new(move || -> Box<dyn IntoIterator<Item=Event>> {
-                Box::new(Some(Event{
-                    datum: Datum::Bool(b.clone()),
-                    prob: 1.0
-                }))
+            let b = b.lit.clone();
+            PartialApp::new_zero(move || -> Prob {
+                Prob::from(Event::new_bool(b))
             })
         },
         &OrderedExpression::ConstantInt(ref i) => {
-            PartialApplication::Zero(Box::new(move || -> Box<dyn IntoIterator<Item=Event>> {
-                Box::new(Some(Event{
-                    datum: Datum::Int(i.clone()),
-                    prob: 1.0,
-                }))
+            let i = i.lit.clone();
+            PartialApp::new_zero(move || -> Prob {
+                Prob::from(Event::new_int(i))
             })
         },
+        &OrderedExpression::Op(ref op) => {
+            let left = coll.get_expr(&op.left);
+            let right = coll.get_expr(&op.right);
+            let kind = op.kind.clone();
+            match op.op {
+                Operation::Sub | Operation::Mul | Operation::Div | Operation::Add => {
+                    match op.kind {
+                        TypeData::CollectionOfInt => {
+                        }
+                    }
+                }
+            }
+        }
         _ => {
             panic!()
         }

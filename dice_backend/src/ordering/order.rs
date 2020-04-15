@@ -23,7 +23,7 @@ impl<'a> OrderingCollection<'a> {
         self.ret
     }
 
-    pub fn get_expr<'b>(&'b self, arg: &u64) -> &'b OrderedExpression<'a>> {
+    pub fn get_expr<'b>(&'b self, arg: &u64) -> &'b OrderedExpression<'a> {
         self.data.get(arg).unwrap()
     }
 

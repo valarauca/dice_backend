@@ -7,81 +7,6 @@ pub use self::identifier::Identifier;
 mod stack;
 pub use self::stack::CallStack;
 
-#[test]
-fn test_non_trivial_program_2() {
-    use super::namespace::Namespace;
-    use super::parser_output::{AbstractSyntaxTree, Literal, TypeData};
-
-    let trivial_program = r#"
-const MAX:int = 6;
-const MIN:int = 1;
-
-fn reroll_1(dice: vec<int>) -> vec<int> {
-    let max: int = MAX;
-    return reroll(max, MIN, (1 == dice), dice);
-}
-
-analyze reroll_1(roll(MAX,MIN,10));
-"#;
-
-    let ast = match AbstractSyntaxTree::parse(trivial_program) {
-        Ok(ast) => ast,
-        Err(e) => panic!("ast error: {:?}", e),
-    };
-    let namespace = match Namespace::new(&ast) {
-        Ok(namespace) => namespace,
-        Err(e) => panic!("namespace error: {:?}", e),
-    };
-    let cfgcoll = ExpressionCollection::new(&namespace);
-
-    // wrap our namespace in a callstack so can query function's data easier
-    let mut stack = CallStack::new(&cfgcoll);
-
-    // push our function onto the stack
-    let expr = stack.get_return().unwrap();
-    let expr_hash = expr.get_hash();
-    let return_func_id = match expr {
-        HashedExpression::Func(ref id, ref args, TypeData::CollectionOfInt) => {
-            // this should be our `analyze reroll_1(roll(MAX, MIN, 10));
-            // statement
-            assert!(args.len() == 1);
-            stack.push(id, &expr_hash);
-            id.clone()
-        }
-        anything_else => panic!("Expected a function. Found: {:?}", anything_else),
-    };
-    // read this interior function's control stack
-    let interior_args = match stack.get_return() {
-        Option::Some(HashedExpression::Func(ref id, ref args, TypeData::CollectionOfInt)) => {
-            assert!(stack.is_stdlib(id));
-            assert!(args.len() == 4);
-            args.clone()
-        }
-        anything_else => panic!(
-            "Expected a standardlibrary function. Found: {:?}",
-            anything_else
-        ),
-    };
-    match stack.get_expr(&interior_args[0]) {
-        Option::Some(HashedExpression::Var(ref id, TypeData::Int)) => {
-            match stack.get_var(id) {
-                Option::Some(HashedExpression::ExternalConstant(ref id, TypeData::Int)) => {
-                    match stack.get_var(id) {
-                        Option::Some(HashedExpression::ConstantValue(
-                            Literal::Number(6),
-                            TypeData::Int,
-                        )) => {}
-                        anything_else => {
-                            panic!("Expected a constant value of 6, found: {:?}", anything_else)
-                        }
-                    }
-                }
-                anything_else => panic!("Expected external constant, Found: {:?}", anything_else),
-            };
-        }
-        anything_else => panic!("expected a variable. Found: {:?}", anything_else),
-    };
-}
 
 #[test]
 fn test_non_trivial_program_1() {
@@ -94,10 +19,11 @@ const MIN:int = 1;
 
 fn reroll_1(dice: vec<int>) -> vec<int> {
     let max: int = MAX;
-    return reroll(max, MIN, (1 == dice), dice);
+    let remaining: vec<int> = filter( (1 != dice), dice);
+    return join(remaining, roll(max,MIN,(len(dice) - len(remaining))));
 }
 
-analyze reroll_1(roll(MAX,MIN,10));
+analyze sum(roll(MAX,MIN,10));
 "#;
 
     let ast = match AbstractSyntaxTree::parse(trivial_program) {
