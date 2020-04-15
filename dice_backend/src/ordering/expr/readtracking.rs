@@ -32,12 +32,18 @@ pub trait ReadTrackingOp: AsMut<ReadTracking> + AsRef<ReadTracking> {
 
     /// append a sink (and expression which reads 'this' expression)
     fn add_sink(&mut self, sink: u64) {
-        self.as_mut().sinks.push(sink);
+        let already = self.as_mut().sinks.iter().map(|x| *x == sink).fold(false, |a,b| a | b);
+        if !already {
+            self.as_mut().sinks.push(sink);
+        }
     }
 
     /// append a source (an expression which 'this' expression reads)
     fn add_source(&mut self, source: u64) {
-        self.as_mut().sources.push(source);
+        let already = self.as_mut().sources.iter().map(|x| *x == source).fold(false, |a,b| a | b);
+        if !already {
+            self.as_mut().sources.push(source);
+        }
     }
 
     /// return the number of expressions which read this expression

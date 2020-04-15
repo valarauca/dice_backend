@@ -1,12 +1,14 @@
 
 use std::collections::BTreeMap;
+use std::collections::btree_map::Iter;
 
 use super::super::runner::{InlinedCollection, InlinedExpression};
 use super::expr::*;
 
-
-struct OrderingCollection<'a> {
-    data: BTreeMap<u64,OrderedExpression<'a>>
+/// Ordering Collection assigns sources & sinks for expressions
+pub struct OrderingCollection<'a> {
+    data: BTreeMap<u64,OrderedExpression<'a>>,
+    ret: u64,
 }
 impl<'a> OrderingCollection<'a> {
 
@@ -17,6 +19,14 @@ impl<'a> OrderingCollection<'a> {
         item
     }
 
+    pub fn get_return(&self) -> u64 {
+        self.ret
+    }
+
+    pub fn get_expr<'b>(&'b self) -> Iter<'b, u64, OrderedExpression> {
+        self.data.iter()
+    }
+
 
     /// build a new collection
     fn init(arg: &InlinedCollection<'a>) -> Self {
@@ -24,7 +34,8 @@ impl<'a> OrderingCollection<'a> {
             data: arg
                 .get_expression_map()
                 .map(|(key,value)| (*key,OrderedExpression::new(&value)))
-                .collect()
+                .collect(),
+            ret: arg.get_return().unwrap(),
         }
     }
 
@@ -33,24 +44,7 @@ impl<'a> OrderingCollection<'a> {
     fn update_reader_coll(&mut self) {
         let sinksource = self.get_ordering();
         for (sink,source) in sinksource.iter() {
-            self.update_reader(*sink,*source);
-            // naive attempt to set ordering
-            self.update_order(*sink,*source);
-        }
-    }
-
-    /// let an expression know it'll be read
-    fn update_reader(&mut self, sink: u64, source: u64) {
-        self.get_mut(&source).add_sink(sink);
-    }
-
-    /// ensure the sink has a higher "source ordering" than
-    /// then it's source
-    fn update_order(&mut self, sink: u64, source: u64) {
-        let sink_ordering = self.get(&sink).get_ordering();
-        let source_ordering = self.get(&source).get_ordering();
-        if sink_ordering <= source_ordering {
-            self.get_mut(&sink).set_ordering(source_ordering + 1);
+            self.update_reader_sink(sink,source);
         }
     }
 
@@ -61,6 +55,10 @@ impl<'a> OrderingCollection<'a> {
             .values_mut()
             .flat_map(OrderedExpression::get_source_sink)
             .collect()
+    }
+
+    fn update_reader_sink(&mut self, sink: &u64, source: &u64) {
+        self.get_mut(source).add_sink(*sink);
     }
 
     /// get an expression as a mutable pointer
