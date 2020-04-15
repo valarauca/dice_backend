@@ -68,60 +68,61 @@ impl<'a> InlinedExpression<'a> {
                 InlinedExpression::func(id, args.as_ref(), &hash, stack, coll)
             }
             &HashedExpression::Op(ref left, op, ref right, out) => {
-                match (stack.get_expr(left), stack.get_expr(right)) {
-                    (Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref left),TypeData::Bool)),Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref right),TypeData::Bool))) => {
+                // convert arguments into new format
+                let left = InlinedExpression::new(stack.get_expr(left).unwrap(), stack, coll);
+                let right = InlinedExpression::new(stack.get_expr(right).unwrap(), stack, coll);
+                match (left,right) {
+                    (InlinedExpression::ConstantBool(l),InlinedExpression::ConstantBool(r)) => {
                         match (out, op) {
                             (TypeData::Bool, Operation::And) => {
-                                Some(InlinedExpression::ConstantBool(left & right))
+                                Some(InlinedExpression::ConstantBool(l & r)) 
                             },
-                            (TypeData::Bool, Operation::Or) => {
-                                Some(InlinedExpression::ConstantBool(left | right))
-                             },
-                             anything_else => _unreachable_panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
+                            (TypeData::Bool,Operation::Or) => {
+                                Some(InlinedExpression::ConstantBool(l | r))
+                            },
+                            _ => panic!("other boolean expressions are not possible"),
                         }
                     }
-                    (Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref left),TypeData::Int)),Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref right),TypeData::Int))) => {
+                    (InlinedExpression::ConstantInt(left),InlinedExpression::ConstantInt(right)) => {
                         match (out, op) {
-                         (TypeData::Int, Operation::Add) => {
-                             Some(InlinedExpression::ConstantInt(*left as i32 + *right as i32))
-                         },
-                         (TypeData::Int, Operation::Sub) => {
-                             Some(InlinedExpression::ConstantInt(*left as i32 - *right as i32))
-                         },
-                         (TypeData::Int, Operation::Mul) => {
-                             Some(InlinedExpression::ConstantInt(*left as i32 * *right as i32))
-                         },
-                         (TypeData::Int, Operation::Div) => {
-                             Some(InlinedExpression::ConstantInt(*left as i32 / *right as i32))
-                         },
-                         (TypeData::Int, Operation::Or) => {
-                             Some(InlinedExpression::ConstantInt(*left as i32 | *right as i32))
-                         },
-                         (TypeData::Int, Operation::And) => {
-                             Some(InlinedExpression::ConstantInt(*left as i32 & *right as i32))
-                         },
-                         (TypeData::Bool, Operation::Equal) => {
-                             Some(InlinedExpression::ConstantBool(*left == *right))
-                         },
-                         (TypeData::Bool, Operation::GreaterThan) => {
-                             Some(InlinedExpression::ConstantBool(*left > *right))
-                         },
-                         (TypeData::Bool, Operation::LessThan) => {
-                             Some(InlinedExpression::ConstantBool(*left < *right))
-                         },
-                         (TypeData::Bool, Operation::GreaterThanEqual) => {
-                             Some(InlinedExpression::ConstantBool(*left >= *right))
-                         },
-                         (TypeData::Bool, Operation::LessThanEqual) => {
-                             Some(InlinedExpression::ConstantBool(*left <= *right))
-                         },
-                         anything_else => _unreachable_panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
+                            (TypeData::Int, Operation::Add) => {
+                                Some(InlinedExpression::ConstantInt(left + right))
+                            },
+                            (TypeData::Int, Operation::Sub) => {
+                                Some(InlinedExpression::ConstantInt(left - right))
+                            },
+                            (TypeData::Int, Operation::Mul) => {
+                                Some(InlinedExpression::ConstantInt(left * right))
+                            },
+                            (TypeData::Int, Operation::Div) => {
+                                Some(InlinedExpression::ConstantInt(left / right))
+                            },
+                            (TypeData::Int, Operation::Or) => {
+                                Some(InlinedExpression::ConstantInt(left | right))
+                            },
+                            (TypeData::Int, Operation::And) => {
+                                Some(InlinedExpression::ConstantInt(left & right))
+                            },
+                            (TypeData::Bool, Operation::Equal) => {
+                                Some(InlinedExpression::ConstantBool(left == right))
+                            },
+                            (TypeData::Bool, Operation::GreaterThan) => {
+                                Some(InlinedExpression::ConstantBool(left > right))
+                            },
+                            (TypeData::Bool, Operation::LessThan) => {
+                                Some(InlinedExpression::ConstantBool(left < right))
+                            },
+                            (TypeData::Bool, Operation::GreaterThanEqual) => {
+                                Some(InlinedExpression::ConstantBool(left >= right))
+                            },
+                            (TypeData::Bool, Operation::LessThanEqual) => {
+                                Some(InlinedExpression::ConstantBool(left <= right))
+                            },
+                            _ => panic!("illegal interger operation"),
                         }
-                    },
-                    (Option::Some(ref left), Option::Some(ref right)) => {
-                        let left = InlinedExpression::new(left, stack, coll).get_hash();
-                        let right = InlinedExpression::new(right, stack, coll).get_hash();
-                        Some(InlinedExpression::Operation(left, op, right, out))
+                    }
+                    (left,right) => {
+                        Some(InlinedExpression::Operation(left.get_hash(), op, right.get_hash(), out))
                     },
                     anything_else => _unreachable_panic!("illegal operation. Should be caught by type checker. {:?}", anything_else)
                 }
