@@ -21,7 +21,7 @@ mod value;
 mod cfgbuilder;
 mod formatter;
 mod namespace;
-//mod ordering;
+mod ordering;
 mod runner;
 mod seahasher;
 mod syntaxhelper;

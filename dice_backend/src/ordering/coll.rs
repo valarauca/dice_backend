@@ -30,6 +30,8 @@ impl<'a> OrderingCollection<'a> {
             base.push(*key);
         }
 
+        let mut expr = self.expr.keys().map(|k| k.clone()).collect::<Vec<u64>>();
+
         // build a list of tuples which represent
         // (sync,source)
         let mut args = Vec::<(u64, u64)>::with_capacity(self.expr.len());
