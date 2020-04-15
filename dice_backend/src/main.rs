@@ -19,10 +19,10 @@ pub mod parser_output;
 mod value;
 
 mod cfgbuilder;
-mod exec;
 mod formatter;
 mod namespace;
 mod ordering;
+mod inliner;
 mod runner;
 mod seahasher;
 mod syntaxhelper;
