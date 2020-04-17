@@ -4,7 +4,7 @@ mod expr;
 pub use self::expr::InlinedExpression;
 
 #[test]
-fn test_nontrivial_program() {
+fn test_trivial_program() {
     use super::cfgbuilder::{ExpressionCollection, HashedExpression};
     use super::namespace::Namespace;
     use super::parser_output::{AbstractSyntaxTree, Literal, Operation, TypeData};
