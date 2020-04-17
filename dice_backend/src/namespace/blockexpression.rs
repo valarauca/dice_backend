@@ -74,7 +74,7 @@ impl<'a> BlockExpression<'a> {
                     (TypeData::CollectionOfInt, TypeData::Int) => TypeData::CollectionOfInt,
                     (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
                         TypeData::CollectionOfInt
-                    },
+                    }
                     (left_type, right_type) => {
                         return Err(format!(
                             "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
@@ -83,21 +83,20 @@ impl<'a> BlockExpression<'a> {
                     }
                 }
             }
-            Operation::Equal
-            | Operation::NotEqual => match (left.get_type()?,right.get_type()?) {
+            Operation::Equal | Operation::NotEqual => match (left.get_type()?, right.get_type()?) {
                 (TypeData::Int, TypeData::Int) => TypeData::Bool,
                 (TypeData::Bool, TypeData::Bool) => TypeData::Bool,
-                (TypeData::CollectionOfInt, TypeData::Int) |
-                (TypeData::Int, TypeData::CollectionOfInt) |
-                (TypeData::Bool,TypeData::CollectionOfBool) |
-                (TypeData::CollectionOfBool,TypeData::Bool) => TypeData::CollectionOfBool,
+                (TypeData::CollectionOfInt, TypeData::Int)
+                | (TypeData::Int, TypeData::CollectionOfInt)
+                | (TypeData::Bool, TypeData::CollectionOfBool)
+                | (TypeData::CollectionOfBool, TypeData::Bool) => TypeData::CollectionOfBool,
                 (left_type, right_type) => {
                     return Err(format!(
                         "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
                         left, op, right, left_type, op, right_type
                     ))
                 }
-            }
+            },
             Operation::GreaterThan
             | Operation::LessThan
             | Operation::GreaterThanEqual

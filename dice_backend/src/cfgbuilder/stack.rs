@@ -26,9 +26,13 @@ impl<'a, 'b> CallStack<'a, 'b> {
     /// push function will modify the internal stack adding another function to the
     /// context
     pub fn push(&mut self, id: &Identifier, expr: &u64) {
-
         // ensure no recursive calls happen
-        let recursion = self.name.iter().filter(|existing| *existing == id).next().is_some();
+        let recursion = self
+            .name
+            .iter()
+            .filter(|existing| *existing == id)
+            .next()
+            .is_some();
         if recursion {
             panic!("recursion detected");
         }

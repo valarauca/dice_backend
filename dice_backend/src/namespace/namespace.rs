@@ -162,9 +162,7 @@ impl<'a> Namespace<'a> {
             FunctionDeclaration {
                 stdlib: true,
                 name: "len",
-                args: vec![
-                    ("length_of_collection", TypeData::CollectionOfInt),
-                ].into_boxed_slice(),
+                args: vec![("length_of_collection", TypeData::CollectionOfInt)].into_boxed_slice(),
                 ret: TypeData::Int,
                 body: Statements {
                     data: vec![].into_boxed_slice(),
@@ -179,7 +177,8 @@ impl<'a> Namespace<'a> {
                 args: vec![
                     ("join_collection_over_a", TypeData::CollectionOfInt),
                     ("join_collection_over_b", TypeData::CollectionOfInt),
-                ].into_boxed_slice(),
+                ]
+                .into_boxed_slice(),
                 ret: TypeData::CollectionOfInt,
                 body: Statements {
                     data: vec![].into_boxed_slice(),
