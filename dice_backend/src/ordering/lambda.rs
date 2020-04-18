@@ -122,7 +122,7 @@ pub fn filter() -> Combinator {
                 .get_bool_vec()
                 .into_iter()
                 .zip(d2.get_int_vec())
-                .filter_map(|(b, i)| -> Option<i32> if *b { Some(*i) } else { None })
+                .filter_map(|(b, i)| -> Option<i32> {if *b { Some(*i) } else { None }})
                 .collect();
             Element::new(v, p1)
         }))
