@@ -1,9 +1,10 @@
-use super::super::seahasher::DefaultSeaHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::mem::replace;
 
 use super::super::itertools::Itertools;
 
+use super::super::seahasher::DefaultSeaHasher;
 use super::{Datum, Dice3, Dice6, Element, ElementFilter, ElementIterator};
 
 /// Iter is an iterator of elements
@@ -16,15 +17,12 @@ pub type Iter = Box<dyn Iterator<Item = Element>>;
  *
  */
 
-/// Filter is a lambda for converting
-///   Element -> None
-///   Element -> Element
-///   Element -> vec![Element]
-pub type Filter = Box<dyn Fn(Element) -> ElementFilter + 'static>;
-
 /// Chain is something that operators on individual elements of an iterator
 /// it smoothly transforms an iterator
 pub type Chain = Box<dyn Fn(Iter) -> Iter + 'static>;
+
+/// Allows a chain to be restarted
+pub type CoalesceChain = Box<dyn Fn(Iter) -> Init + 'static>;
 
 /// Init is used to initialize an chain
 pub type Init = Box<dyn Fn() -> Iter + 'static>;
@@ -32,21 +30,48 @@ pub type Init = Box<dyn Fn() -> Iter + 'static>;
 /// Combinator joins 2 arguments
 pub type Combinator = Box<dyn Fn(Iter, Iter) -> Iter + 'static>;
 
+/// Joins 2 iterators together, but returns a lambda which can
+/// be invoked multiple times
+pub type CoalesceCombinator = Box<dyn Fn(Iter, Iter) -> Init + 'static>;
+
 /// Coalesce reifies an iterator stream so it can be restarted
 pub type Coalesce = Box<dyn Fn(Iter) -> Init + 'static>;
 
-/*
- * Generators
- *
- * Lambdas which return a lambda
- *
- */
+/// LambdaKind is used for building & resolving lambdas
+pub enum LambdaKind {
+    None,
+    Chain(Chain),
+    CoalesceChain(CoalesceChain),
+    Init(Init),
+    Combinator(Combinator),
+    CoalesceCombinator(CoalesceCombinator),
+}
+impl LambdaKind {
+    pub fn is_idempotent(&self) -> bool {
+        match self {
+            &LambdaKind::None => false,
+            &LambdaKind::Chain(_) => false,
+            &LambdaKind::CoalesceChain(_) => true,
+            &LambdaKind::Init(_) => true,
+            &LambdaKind::Combinator(_) => false,
+            &LambdaKind::CoalesceCombinator(_) => true,
+        }
+    }
 
-pub type FilterGenerator = Box<dyn Fn() -> Filter + 'static>;
-pub type ChainGenerator = Box<dyn Fn() -> Chain + 'static>;
-pub type InitGenerator = Box<dyn Fn() -> Init + 'static>;
-pub type CombinatorGenerator = Box<dyn Fn() -> Combinator + 'static>;
-pub type CoalesceGenerator = Box<dyn Fn() -> Coalesce + 'static>;
+    pub fn make_idempotent(&mut self) {
+        if self.is_idempotent() {
+            return;
+        }
+        let new_value = match replace(self, LambdaKind::None) {
+            LambdaKind::Chain(chain) => LambdaKind::CoalesceChain(chain_to_coalesce(chain)),
+            LambdaKind::Combinator(combin) => {
+                LambdaKind::CoalesceCombinator(combinator_to_coalesce(combin))
+            }
+            x => x,
+        };
+        replace(self, new_value);
+    }
+}
 
 /// build a constant boolean
 pub fn const_bool(b: bool) -> Init {
@@ -70,6 +95,46 @@ pub fn len() -> Chain {
         new_iter(iter.map(|e| -> Element {
             let (datum, prob) = e.split();
             Element::new(datum.len() as i32, prob)
+        }))
+    })
+}
+
+/// stdlib count
+pub fn count() -> Chain {
+    new_chain(move |iter: Iter| -> Iter {
+        new_iter(iter.map(|e| -> Element {
+            let (datum, prob) = e.split();
+            let count = datum.get_bool_vec().iter().filter(|x| **x).count() as i32;
+            Element::new(count, prob)
+        }))
+    })
+}
+
+/// stdlib filter
+pub fn filter() -> Combinator {
+    new_combin(move |i1: Iter, i2: Iter| -> Iter {
+        new_iter(i1.zip(i2).map(|(i1, i2)| -> Element {
+            let (d1, p1) = i1.split();
+            let (d2, p2) = i2.split();
+            // their source should be identical
+            assert_eq!(p1, p2);
+            let v: Vec<i32> = d1
+                .get_bool_vec()
+                .into_iter()
+                .zip(d2.get_int_vec())
+                .filter_map(|(b, i)| -> Option<i32> if *b { Some(*i) } else { None })
+                .collect();
+            Element::new(v, p1)
+        }))
+    })
+}
+
+/// stdlib sum
+pub fn sum() -> Chain {
+    new_chain(move |iter: Iter| -> Iter {
+        new_iter(iter.map(|e| -> Element {
+            let (datum, prob) = e.split();
+            Element::new(datum.sum(), prob)
         }))
     })
 }
@@ -216,6 +281,27 @@ fn roll_dice3(num: usize, base_prob: f64) -> Iter {
 }
 
 /*
+ * Converstion Types
+ *
+ */
+
+#[inline(always)]
+pub fn chain_to_coalesce(chain_arg: Chain) -> CoalesceChain {
+    Box::new(move |iter: Iter| -> Init {
+        let lambda = coalesce();
+        lambda(chain_arg(iter))
+    })
+}
+
+#[inline(always)]
+pub fn combinator_to_coalesce(arg: Combinator) -> CoalesceCombinator {
+    Box::new(move |i1: Iter, i2: Iter| -> Init {
+        let lambda = coalesce();
+        lambda(arg(i1, i2))
+    })
+}
+
+/*
  * Iterator builder
  *
  */
@@ -232,14 +318,6 @@ where
  * Base type helper functions
  *
  */
-
-#[inline(always)]
-fn new_filter<F>(arg: F) -> Filter
-where
-    F: Fn(Element) -> ElementFilter + 'static,
-{
-    Box::new(arg)
-}
 
 #[inline(always)]
 fn new_chain<F>(arg: F) -> Chain
@@ -269,51 +347,6 @@ where
 fn new_coalesce<F>(arg: F) -> Coalesce
 where
     F: Fn(Iter) -> Init + 'static,
-{
-    Box::new(arg)
-}
-
-/*
- * Generator type helper functions
- *
- */
-
-#[inline(always)]
-fn new_filter_gen<F>(arg: F) -> FilterGenerator
-where
-    F: Fn() -> Filter + 'static,
-{
-    Box::new(arg)
-}
-
-#[inline(always)]
-fn new_chain_gen<F>(arg: F) -> ChainGenerator
-where
-    F: Fn() -> Chain + 'static,
-{
-    Box::new(arg)
-}
-
-#[inline(always)]
-fn new_init_gen<F>(arg: F) -> InitGenerator
-where
-    F: Fn() -> Init + 'static,
-{
-    Box::new(arg)
-}
-
-#[inline(always)]
-fn new_combin_gen<F>(arg: F) -> CombinatorGenerator
-where
-    F: Fn() -> Combinator + 'static,
-{
-    Box::new(arg)
-}
-
-#[inline(always)]
-fn new_coalesce_gen<F>(arg: F) -> CoalesceGenerator
-where
-    F: Fn() -> Coalesce + 'static,
 {
     Box::new(arg)
 }

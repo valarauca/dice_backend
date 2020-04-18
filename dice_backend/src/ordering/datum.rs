@@ -66,6 +66,10 @@ impl Datum {
         }
     }
 
+    pub fn sum(&self) -> i32 {
+        self.get_int_vec().iter().sum()
+    }
+
     pub fn len(&self) -> i32 {
         match self {
             &Datum::CollectionOfInt(ref s) => s.len() as i32,
