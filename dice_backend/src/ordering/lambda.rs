@@ -71,6 +71,50 @@ impl LambdaKind {
         };
         replace(self, new_value);
     }
+
+	pub fn get_iter<I: IntoIterator<Item=Iter>>(
+		&mut self, 
+		args: I
+	) -> Iter {
+		// interior function is `next` for each arg
+		let mut iter = args.into_iter();
+		match replace(self, LambdaKind::None) {
+			LambdaKind::None => {
+				_unreachable_panic!("invalidated b/c not idempotent");
+			}
+			LambdaKind::Chain(lambda) => {
+				// return the iterator & invalid self
+				lambda(iter.next().unwrap())
+			}
+			LambdaKind::Combinator(lambda) => {
+				// return the iterator & invalid self
+				lambda(iter.next().unwrap(),iter.next().unwrap())
+			}
+			LambdaKind::CoalesceCombinator(lambda) => {
+				// create function with can build multiple
+				// copies of this iterator
+				let init_func = lambda(iter.next().unwrap(),iter.next().unwrap());
+				let iter_out = init_func();
+				// update self with idemponent
+				// lambda
+				replace(self, LambdaKind::Init(init_func));
+				// return iterator
+				iter_out
+			}
+			LambdaKind::CoalesceChain(lambda) => {
+				let init_func = lambda(iter.next().unwrap());
+				let iter_out = init_func();
+				replace(self, LambdaKind::Init(init_func));
+				iter_out
+			}
+			LambdaKind::Init(lambda) => {
+				let iter_out = lambda();
+				replace(self, LambdaKind::Init(lambda));
+				iter_out
+			}
+			
+		}
+	}
 }
 
 /// build a constant boolean

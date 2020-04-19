@@ -29,72 +29,72 @@ impl<'a, 'b: 'a> Resolved<'a, 'b> {
         self.data.insert(expr, lambda);
     }
 
-    fn is_idemopotent(&self, expr: &&'a InlinedExpression<'b>) -> bool {
-        self.data.get(expr).into_iter().map(|lambda| lambda.is_demopotent()).next().unwrap_or_else(|| false)
-    }
-
-    fn resolve(&mut self, expr: &&'a InlinedExpression<'b>) -> LambdaKind {
-        if self.is_idempotent(expr) {
-            match self.data.get(expr) {
-                Option::Some(arg) => {
-
-                }
-            }
-        } else {
-        }
-    }
+	fn resolve<I: Iterator<Item=Iter>>(
+		&mut self,
+		expr: &&'a InlinedExpression<'b>,
+		args: I
+	) -> Iter {
+		match self.data.get_mut(expr) {
+			Option::Some(ref mut lambda_kind) => {
+				lambda_kind.get_iter(args)
+			}
+			Option::None => {
+				_unreachable_panic!()
+			}
+		}
+	}
 }
 
-/*
 fn builder_recursive<'a,'b:'a>(
     resolve: &mut Resolved<'a, 'b>,
     coll: &'a InlinedCollection<'b>,
     expr: &'a InlinedExpression<'b>,
-)  {
+) -> Iter {
     match expr {
-        &InlinedExpression::ConstantBool(ref b) => {
-            resolve.insert(expr, LambdaKind::Init(const_bool(b.clone())))
+        &InlinedExpression::ConstantBool(_) => {
+		resolve.resolve(&expr,None)
         }
         &InlinedExpression::ConstantInt(ref i) => {
-            resolve.insert(expr, LambdaKind::Init(const_int(i.clone())))
+		resolve.resolve(&expr,None)
         }
         &InlinedExpression::StdLibFunc("roll_d6", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            // build the argument
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            // insert self
-            resolve.insert(expr, LambdaKind::Chain(d6()));
+            	debug_assert_eq!(args.len(), 1);
+		let arg_iter = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		resolve.resolve(&expr,Some(arg_iter))
         }
         &InlinedExpression::StdLibFunc("roll_d3", ref args) => {
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            resolve.insert(expr, LambdaKind::Chain(d3()));
+            	debug_assert_eq!(args.len(), 1);
+		let arg_iter = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		resolve.resolve(&expr,Some(arg_iter))
         }
         &InlinedExpression::StdLibFunc("count", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            resolve.insert(expr, LambdaKind::Chain(count()));
+            	debug_assert_eq!(args.len(), 1);
+		let arg_iter = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		resolve.resolve(&expr,Some(arg_iter))
         }
         &InlinedExpression::StdLibFunc("len", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            resolve.insert(expr, LambdaKind::Chain(len()));
+            	debug_assert_eq!(args.len(), 1);
+		let arg_iter = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		resolve.resolve(&expr,Some(arg_iter))
         }
         &InlinedExpression::StdLibFunc("join", ref args) => {
-            debug_assert_eq!(args.len(), 2);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap());
-            resolve.insert(expr, LambdaKind::Combinator(join()));
+            	debug_assert_eq!(args.len(), 2);
+		let arg_iter1 = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		let arg_iter2 = builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap());
+		let iters: [Iter;2] = [arg_iter1,arg_iter2];
+		resolve.resolve(&expr,iters)
         }
         &InlinedExpression::StdLibFunc("sum", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            resolve.insert(expr, LambdaKind::Chain(sum()));
+            	debug_assert_eq!(args.len(), 1);
+		let arg_iter = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		resolve.resolve(&expr,Some(arg_iter))
         }
         &InlinedExpression::StdLibFunc("filter", ref args) => {
-            debug_assert_eq!(args.len(), 2);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap());
-            resolve.insert(expr, LambdaKind::Combinator(filter()));
+            	debug_assert_eq!(args.len(), 2);
+		let arg_iter1 = builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+		let arg_iter2 = builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap());
+		let iters: [Iter;2] = [arg_iter1,arg_iter2];
+		resolve.resolve(&expr,iters)
         }
         &InlinedExpression::StdLibFunc(ref name, _) => {
             panic!("invalid standard library function named {:?}", name);
@@ -335,7 +335,6 @@ fn builder_recursive<'a,'b:'a>(
         ) => panic!("invalid expression"),
     }
 }
-*/
 
 /// shoves thing into our resolve structure
 fn lambda_builder_recursive<'a, 'b: 'a>(
