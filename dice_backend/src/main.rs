@@ -6,12 +6,14 @@
     unused_parens
 )]
 
-#[macro_use] extern crate lazy_static;
-extern crate rand;
-extern crate num_rational;
+extern crate smallvec;
+#[macro_use]
+extern crate lazy_static;
 extern crate clap;
 extern crate itertools;
 extern crate lalrpop_util;
+extern crate num_rational;
+extern crate rand;
 extern crate regex;
 extern crate seahash;
 use clap::{App, Arg, SubCommand};
@@ -24,9 +26,9 @@ mod value;
 
 mod cfgbuilder;
 mod formatter;
+mod inliner;
 mod namespace;
 mod ordering;
-mod inliner;
 mod seahasher;
 mod syntaxhelper;
 mod validator;

@@ -1,18 +1,18 @@
 use std::hash::BuildHasher;
-use std::sync::{Arc,Mutex};
+use std::sync::{Arc, Mutex};
 
-use super::rand::{Rng,RngCore,SeedableRng};
-use super::rand::rngs::{OsRng,StdRng};
+use super::rand::rngs::{OsRng, StdRng};
+use super::rand::{Rng, RngCore, SeedableRng};
 
 use super::seahash::SeaHasher;
 
-
 lazy_static! {
     static ref RANDOM_POOL: Arc<Mutex<StdRng>> = {
-        Arc::new(Mutex::new( match StdRng::from_rng(OsRng) {
-                    Ok(x) => x,
-                    Err(e) => panic!("could not build RNG, error {:?}", e)
-        }))};
+        Arc::new(Mutex::new(match StdRng::from_rng(OsRng) {
+            Ok(x) => x,
+            Err(e) => panic!("could not build RNG, error {:?}", e),
+        }))
+    };
 }
 
 #[derive(Clone, Copy)]
@@ -29,7 +29,7 @@ impl Default for DefaultSeaHasher {
         let b = rng.next_u64();
         let c = rng.next_u64();
         let d = rng.next_u64();
-        DefaultSeaHasher { a, b, c, d}
+        DefaultSeaHasher { a, b, c, d }
     }
 }
 impl BuildHasher for DefaultSeaHasher {

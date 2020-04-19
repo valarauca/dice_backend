@@ -5,7 +5,7 @@ use std::mem::replace;
 use super::super::itertools::Itertools;
 
 use super::super::seahasher::DefaultSeaHasher;
-use super::{Datum, Dice3, Dice6, Rational, Element};
+use super::{BoolVec, Datum, Dice3, Dice6, Element, IntVec, Rational};
 
 /// Iter is an iterator of elements
 pub type Iter = Box<dyn Iterator<Item = Element>>;
@@ -72,47 +72,43 @@ impl LambdaKind {
         replace(self, new_value);
     }
 
-	pub fn get_iter(
-		&mut self, 
-		stack: &mut Vec<Iter>,
-	) -> Iter {
-		match replace(self, LambdaKind::None) {
-			LambdaKind::None => {
-				_unreachable_panic!("invalidated b/c not idempotent");
-			}
-			LambdaKind::Chain(lambda) => {
-				// return the iterator & invalid self
-				lambda(stack.pop().unwrap())
-			}
-			LambdaKind::Combinator(lambda) => {
-				// return the iterator & invalid self
-				lambda(stack.pop().unwrap(),stack.pop().unwrap())
-			}
-			LambdaKind::CoalesceCombinator(lambda) => {
-				// create function with can build multiple
-				// copies of this iterator
-				let init_func = lambda(stack.pop().unwrap(),stack.pop().unwrap());
-				let iter_out = init_func();
-				// update self with idemponent
-				// lambda
-				replace(self, LambdaKind::Init(init_func));
-				// return iterator
-				iter_out
-			}
-			LambdaKind::CoalesceChain(lambda) => {
-				let init_func = lambda(stack.pop().unwrap());
-				let iter_out = init_func();
-				replace(self, LambdaKind::Init(init_func));
-				iter_out
-			}
-			LambdaKind::Init(lambda) => {
-				let iter_out = lambda();
-				replace(self, LambdaKind::Init(lambda));
-				iter_out
-			}
-			
-		}
-	}
+    pub fn get_iter(&mut self, stack: &mut Vec<Iter>) -> Iter {
+        match replace(self, LambdaKind::None) {
+            LambdaKind::None => {
+                _unreachable_panic!("invalidated b/c not idempotent");
+            }
+            LambdaKind::Chain(lambda) => {
+                // return the iterator & invalid self
+                lambda(stack.pop().unwrap())
+            }
+            LambdaKind::Combinator(lambda) => {
+                // return the iterator & invalid self
+                lambda(stack.pop().unwrap(), stack.pop().unwrap())
+            }
+            LambdaKind::CoalesceCombinator(lambda) => {
+                // create function with can build multiple
+                // copies of this iterator
+                let init_func = lambda(stack.pop().unwrap(), stack.pop().unwrap());
+                let iter_out = init_func();
+                // update self with idemponent
+                // lambda
+                replace(self, LambdaKind::Init(init_func));
+                // return iterator
+                iter_out
+            }
+            LambdaKind::CoalesceChain(lambda) => {
+                let init_func = lambda(stack.pop().unwrap());
+                let iter_out = init_func();
+                replace(self, LambdaKind::Init(init_func));
+                iter_out
+            }
+            LambdaKind::Init(lambda) => {
+                let iter_out = lambda();
+                replace(self, LambdaKind::Init(lambda));
+                iter_out
+            }
+        }
+    }
 }
 
 /// build a constant boolean
@@ -160,11 +156,11 @@ pub fn filter() -> Combinator {
             let (d2, p2) = i2.split();
             // their source should be identical
             assert_eq!(p1, p2);
-            let v: Vec<i32> = d1
+            let v: IntVec = d1
                 .get_bool_vec()
                 .into_iter()
                 .zip(d2.get_int_vec())
-                .filter_map(|(b, i)| -> Option<i32> {if *b { Some(*i) } else { None }})
+                .filter_map(|(b, i)| if b { Some(i) } else { None })
                 .collect();
             Element::new(v, p1)
         }))
@@ -216,7 +212,7 @@ pub fn join() -> Combinator {
     new_combin(move |i1: Iter, i2: Iter| -> Iter {
         let lambda = |a: (Element, Element)| -> Element {
             let ((mut datum1, prob1), (datum2, prob2)) = (a.0.split(), a.1.split());
-            datum1.extend_from(datum2.get_int_vec().into_iter().map(|x| *x));
+            datum1.extend_from(datum2.get_int_vec());
             Element::new(datum1, prob1 * prob2)
         };
         let vec_builder = |iter: Iter| -> Vec<Element> {
@@ -256,7 +252,8 @@ pub fn d6() -> Chain {
 /// generate a specific number of `dice3` rolles
 fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
     // lambda for the base case (rolling 1 dice)
-    let lambda = move |x: i32| -> Element { Element::new(vec![x], base_prob / Rational::from_integer(6)) };
+    let lambda =
+        move |x: i32| -> Element { Element::new([x], base_prob / Rational::from_integer(6)) };
 
     // lambda for other cases (rolling >1 dice)
     let joiner = move |tup: (Element, i32)| -> Element {
@@ -290,7 +287,8 @@ fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
 /// generate a specific number of `dice3` rolles
 fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
     // lambda for the base case (rolling 1 dice)
-    let lambda = move |x: i32| -> Element { Element::new(vec![x], base_prob / Rational::from_integer(3)) };
+    let lambda =
+        move |x: i32| -> Element { Element::new([x], base_prob / Rational::from_integer(3)) };
 
     // lambda for other cases (rolling >1 dice)
     let joiner = move |tup: (Element, i32)| -> Element {

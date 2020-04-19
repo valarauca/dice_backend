@@ -1,6 +1,6 @@
 use std::mem::replace;
 
-use super::super::num_rational::{Ratio};
+use super::super::num_rational::Ratio;
 
 use super::Datum;
 
@@ -64,4 +64,3 @@ impl Ord for Element {
         self.datum.cmp(&other.datum)
     }
 }
-

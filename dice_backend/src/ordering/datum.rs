@@ -1,11 +1,26 @@
 use super::super::parser_output::TypeData;
+use super::super::smallvec::SmallVec;
+
+#[cfg(target_pointer_width = "64")]
+pub type IntVec = SmallVec<[i32; 6]>;
+#[cfg(target_pointer_width = "32")]
+pub type IntVec = SmallVec<[i32; 3]>;
+#[cfg(target_pointer_width = "16")]
+pub type IntVec = SmallVec<[i32; 1]>;
+
+#[cfg(target_pointer_width = "64")]
+pub type BoolVec = SmallVec<[bool; 24]>;
+#[cfg(target_pointer_width = "32")]
+pub type BoolVec = SmallVec<[bool; 12]>;
+#[cfg(target_pointer_width = "16")]
+pub type BoolVec = SmallVec<[bool; 6]>;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum Datum {
     Bool(bool),
     Int(i32),
-    CollectionOfInt(Vec<i32>),
-    CollectionOfBool(Vec<bool>),
+    CollectionOfInt(IntVec),
+    CollectionOfBool(BoolVec),
 }
 impl From<i32> for Datum {
     fn from(x: i32) -> Self {
@@ -17,13 +32,27 @@ impl From<bool> for Datum {
         Self::Bool(x)
     }
 }
-impl From<Vec<i32>> for Datum {
-    fn from(x: Vec<i32>) -> Self {
+impl From<[i32; 1]> for Datum {
+    fn from(x: [i32; 1]) -> Datum {
+        let mut smol_vec = IntVec::new();
+        smol_vec.extend_from_slice(&x);
+        Self::CollectionOfInt(smol_vec)
+    }
+}
+impl From<IntVec> for Datum {
+    fn from(x: IntVec) -> Datum {
         Self::CollectionOfInt(x)
     }
 }
-impl From<Vec<bool>> for Datum {
-    fn from(x: Vec<bool>) -> Self {
+impl From<[bool; 1]> for Datum {
+    fn from(x: [bool; 1]) -> Datum {
+        let mut smol_vec = BoolVec::new();
+        smol_vec.extend_from_slice(&x);
+        Self::CollectionOfBool(smol_vec)
+    }
+}
+impl From<BoolVec> for Datum {
+    fn from(x: BoolVec) -> Self {
         Self::CollectionOfBool(x)
     }
 }
@@ -52,22 +81,25 @@ impl Datum {
         }
     }
 
-    pub fn get_bool_vec<'a>(&'a self) -> &'a [bool] {
+    pub fn get_bool_vec(self) -> BoolVec {
         match self {
-            &Datum::CollectionOfBool(ref vec) => vec.as_slice(),
+            Datum::CollectionOfBool(vec) => vec,
             _ => _unreachable_panic!(),
         }
     }
 
-    pub fn get_int_vec<'a>(&'a self) -> &'a [i32] {
+    pub fn get_int_vec(self) -> IntVec {
         match self {
-            &Datum::CollectionOfInt(ref vec) => vec.as_slice(),
+            Datum::CollectionOfInt(vec) => vec,
             _ => _unreachable_panic!(),
         }
     }
 
     pub fn sum(&self) -> i32 {
-        self.get_int_vec().iter().sum()
+        match self {
+            &Datum::CollectionOfInt(ref vec) => vec.as_slice().iter().sum(),
+            _ => _unreachable_panic!(),
+        }
     }
 
     pub fn len(&self) -> i32 {
@@ -88,8 +120,8 @@ impl Datum {
 
     pub fn sort(&mut self) {
         match self {
-            &mut Datum::CollectionOfInt(ref mut vec) => vec.sort_unstable(),
-            &mut Datum::CollectionOfBool(ref mut vec) => vec.sort_unstable(),
+            &mut Datum::CollectionOfInt(ref mut vec) => vec.as_mut_slice().sort_unstable(),
+            &mut Datum::CollectionOfBool(ref mut vec) => vec.as_mut_slice().sort_unstable(),
             _ => {}
         }
     }
