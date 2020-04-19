@@ -5,6 +5,10 @@
     non_snake_case,
     unused_parens
 )]
+
+#[macro_use] extern crate lazy_static;
+extern crate rand;
+extern crate num_rational;
 extern crate clap;
 extern crate itertools;
 extern crate lalrpop_util;
@@ -22,8 +26,8 @@ mod cfgbuilder;
 mod formatter;
 mod namespace;
 mod ordering;
-mod runner;
-pub mod seahasher;
+mod inliner;
+mod seahasher;
 mod syntaxhelper;
 mod validator;
 

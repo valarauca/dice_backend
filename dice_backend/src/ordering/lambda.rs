@@ -5,7 +5,7 @@ use std::mem::replace;
 use super::super::itertools::Itertools;
 
 use super::super::seahasher::DefaultSeaHasher;
-use super::{Datum, Dice3, Dice6, Element, ElementFilter, ElementIterator};
+use super::{Datum, Dice3, Dice6, Rational, Element};
 
 /// Iter is an iterator of elements
 pub type Iter = Box<dyn Iterator<Item = Element>>;
@@ -72,28 +72,26 @@ impl LambdaKind {
         replace(self, new_value);
     }
 
-	pub fn get_iter<I: IntoIterator<Item=Iter>>(
+	pub fn get_iter(
 		&mut self, 
-		args: I
+		stack: &mut Vec<Iter>,
 	) -> Iter {
-		// interior function is `next` for each arg
-		let mut iter = args.into_iter();
 		match replace(self, LambdaKind::None) {
 			LambdaKind::None => {
 				_unreachable_panic!("invalidated b/c not idempotent");
 			}
 			LambdaKind::Chain(lambda) => {
 				// return the iterator & invalid self
-				lambda(iter.next().unwrap())
+				lambda(stack.pop().unwrap())
 			}
 			LambdaKind::Combinator(lambda) => {
 				// return the iterator & invalid self
-				lambda(iter.next().unwrap(),iter.next().unwrap())
+				lambda(stack.pop().unwrap(),stack.pop().unwrap())
 			}
 			LambdaKind::CoalesceCombinator(lambda) => {
 				// create function with can build multiple
 				// copies of this iterator
-				let init_func = lambda(iter.next().unwrap(),iter.next().unwrap());
+				let init_func = lambda(stack.pop().unwrap(),stack.pop().unwrap());
 				let iter_out = init_func();
 				// update self with idemponent
 				// lambda
@@ -102,7 +100,7 @@ impl LambdaKind {
 				iter_out
 			}
 			LambdaKind::CoalesceChain(lambda) => {
-				let init_func = lambda(iter.next().unwrap());
+				let init_func = lambda(stack.pop().unwrap());
 				let iter_out = init_func();
 				replace(self, LambdaKind::Init(init_func));
 				iter_out
@@ -120,7 +118,7 @@ impl LambdaKind {
 /// build a constant boolean
 pub fn const_bool(b: bool) -> Init {
     new_init(move || -> Iter {
-        let v: Option<Element> = Some(Element::new(b, 1.0));
+        let v: Option<Element> = Some(Element::new(b, Rational::from_integer(1)));
         new_iter(v)
     })
 }
@@ -128,7 +126,7 @@ pub fn const_bool(b: bool) -> Init {
 /// build a constant int generator
 pub fn const_int(x: i32) -> Init {
     new_init(move || -> Iter {
-        let v: Option<Element> = Some(Element::new(x, 1.0));
+        let v: Option<Element> = Some(Element::new(x, Rational::from_integer(1)));
         new_iter(v)
     })
 }
@@ -187,7 +185,7 @@ pub fn sum() -> Chain {
 pub fn coalesce() -> Coalesce {
     new_coalesce(move |iter: Iter| -> Init {
         // build a map and merge values
-        let mut map = HashMap::<Datum, f64, DefaultSeaHasher>::with_capacity_and_hasher(
+        let mut map = HashMap::<Datum, Rational, DefaultSeaHasher>::with_capacity_and_hasher(
             100,
             DefaultSeaHasher::default(),
         );
@@ -256,16 +254,16 @@ pub fn d6() -> Chain {
  */
 
 /// generate a specific number of `dice3` rolles
-fn roll_dice6(num: usize, base_prob: f64) -> Iter {
+fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
     // lambda for the base case (rolling 1 dice)
-    let lambda = move |x: i32| -> Element { Element::new(vec![x], base_prob / 6.0) };
+    let lambda = move |x: i32| -> Element { Element::new(vec![x], base_prob / Rational::from_integer(6)) };
 
     // lambda for other cases (rolling >1 dice)
     let joiner = move |tup: (Element, i32)| -> Element {
         let (e, x) = (tup.0, tup.1);
         let (mut datum, prob) = e.split();
         datum.append_int(x);
-        Element::new(datum, prob / 6.0)
+        Element::new(datum, prob / Rational::from_integer(6))
     };
 
     match num {
@@ -290,16 +288,16 @@ fn roll_dice6(num: usize, base_prob: f64) -> Iter {
     }
 }
 /// generate a specific number of `dice3` rolles
-fn roll_dice3(num: usize, base_prob: f64) -> Iter {
+fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
     // lambda for the base case (rolling 1 dice)
-    let lambda = move |x: i32| -> Element { Element::new(vec![x], base_prob / 3.0) };
+    let lambda = move |x: i32| -> Element { Element::new(vec![x], base_prob / Rational::from_integer(3)) };
 
     // lambda for other cases (rolling >1 dice)
     let joiner = move |tup: (Element, i32)| -> Element {
         let (e, x) = (tup.0, tup.1);
         let (mut datum, prob) = e.split();
         datum.append_int(x);
-        Element::new(datum, prob / 3.0)
+        Element::new(datum, prob / Rational::from_integer(3))
     };
 
     match num {
