@@ -17,7 +17,7 @@ pub use self::coll::build_report;
 #[test]
 fn test_1d6() {
     use super::cfgbuilder::{ExpressionCollection, HashedExpression};
-    use super::inliner::InlinedCollection;
+    use super::inliner::{InlinedCollection,InlinedExpression};
     use super::namespace::Namespace;
     use super::parser_output::{AbstractSyntaxTree, Literal, Operation, TypeData};
 
@@ -90,3 +90,75 @@ fn test_2d6() {
         Err(e) => panic!("{:?}", e),
     };
 }
+
+#[test]
+fn test_2d6_join() {
+    use super::cfgbuilder::{ExpressionCollection, HashedExpression};
+    use super::inliner::{InlinedCollection,InlinedExpression};
+    use super::namespace::Namespace;
+    use super::parser_output::{AbstractSyntaxTree, Literal, Operation, TypeData};
+
+    let trivial_program = r#" analyze sum(join(roll_d6(1),roll_d6(1))); "#;
+
+    let ast = match AbstractSyntaxTree::parse(trivial_program) {
+        Ok(ast) => ast,
+        Err(e) => panic!("ast error: {:?}", e),
+    };
+    let namespace = match Namespace::new(&ast) {
+        Ok(namespace) => namespace,
+        Err(e) => panic!("namespace error: {:?}", e),
+    };
+    let cfgcoll = ExpressionCollection::new(&namespace);
+    let inlinecoll = InlinedCollection::new(&cfgcoll);
+    
+    /*
+     * Validate the inline collection
+     *
+     */
+    {
+        let sum_expr = match inlinecoll.get_return().into_iter().flat_map(|expr| inlinecoll.get_expr(&expr)).next().unwrap() {
+            InlinedExpression::StdLibFunc("sum", ref args) => {
+                assert_eq!(args.len(), 1);
+                args[0].clone()
+            },
+            anything_else => panic!("{:?}", anything_else),
+        };
+        match inlinecoll.get_expr(&sum_expr).unwrap() {
+            InlinedExpression::StdLibFunc("join", ref args) => {
+                assert_eq!(args.len(), 2);
+                assert_eq!(args[0], args[1]);
+                match inlinecoll.get_expr(&args[0]).unwrap() {
+                    InlinedExpression::StdLibFunc("roll_d6", ref args) => {
+                        assert_eq!(args.len(), 1);
+                    },
+                    anything_else => panic!("{:?}", anything_else)
+                };
+            },
+            anything_else => panic!("{:?}", anything_else),
+        };
+    }
+
+    let report = build_report(&inlinecoll);
+
+    // check if our report is correct
+    let output = report.equal(&[
+        (Datum::from(2), Rational::new(1, 36)),
+        (Datum::from(3), Rational::new(2, 36)),
+        (Datum::from(4), Rational::new(3, 36)),
+        (Datum::from(5), Rational::new(4, 36)),
+        (Datum::from(6), Rational::new(5, 36)),
+        (Datum::from(7), Rational::new(6, 36)),
+        (Datum::from(8), Rational::new(5, 36)),
+        (Datum::from(9), Rational::new(4, 36)),
+        (Datum::from(10), Rational::new(3, 36)),
+        (Datum::from(11), Rational::new(2, 36)),
+        (Datum::from(12), Rational::new(1, 36)),
+    ]);
+    match output {
+        Ok(()) => {}
+        Err(e) => panic!("{:?}", e),
+    };
+}
+
+
+

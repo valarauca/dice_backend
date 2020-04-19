@@ -211,9 +211,18 @@ pub fn coalesce() -> Coalesce {
 pub fn join() -> Combinator {
     new_combin(move |i1: Iter, i2: Iter| -> Iter {
         let lambda = |a: (Element, Element)| -> Element {
-            let ((mut datum1, prob1), (datum2, prob2)) = (a.0.split(), a.1.split());
-            datum1.extend_from(datum2.get_int_vec());
-            Element::new(datum1, prob1 * prob2)
+            let ((datum1, prob1), (datum2, prob2)) = (a.0.split(), a.1.split());
+            let joined = match (datum1,datum2) {
+                (Datum::CollectionOfInt(a),Datum::CollectionOfInt(b)) => {
+                    let mut a = a;
+                    a.extend(b);
+                    a
+                },
+                (a,b) => {
+                    _unreachable_panic!("expected 2 collections of int, found ({:?},{:?})", a,b);
+                }
+            };
+            Element::new(joined, prob1 * prob2)
         };
         let vec_builder = |iter: Iter| -> Vec<Element> {
             let mut v = Vec::new();

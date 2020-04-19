@@ -93,9 +93,9 @@ fn builder_recursive<'a, 'b: 'a>(
             debug_assert_eq!(args.len(), 2);
             let arg_iter2 =
                 builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap(), stack);
-            stack.push(arg_iter2);
             let arg_iter1 =
                 builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+            stack.push(arg_iter2);
             stack.push(arg_iter1);
             resolve.resolve(&expr, stack)
         }
@@ -110,9 +110,9 @@ fn builder_recursive<'a, 'b: 'a>(
             debug_assert_eq!(args.len(), 2);
             let arg_iter2 =
                 builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap(), stack);
-            stack.push(arg_iter2);
             let arg_iter1 =
                 builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+            stack.push(arg_iter2);
             stack.push(arg_iter1);
             resolve.resolve(&expr, stack)
         }
