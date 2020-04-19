@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
+use super::super::smallvec::{SmallVec};
 use super::super::itertools::Itertools;
 
 use super::super::seahasher::DefaultSeaHasher;
@@ -224,8 +225,8 @@ pub fn join() -> Combinator {
             };
             Element::new(joined, prob1 * prob2)
         };
-        let vec_builder = |iter: Iter| -> Vec<Element> {
-            let mut v = Vec::new();
+        let vec_builder = |iter: Iter| -> SmallVec<[Element;1]> {
+            let mut v = SmallVec::new();
             v.extend(iter);
             v
         };
