@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 use super::super::parser_output::TypeData;
 use super::super::smallvec::SmallVec;
 
@@ -15,12 +17,39 @@ pub type BoolVec = SmallVec<[bool; 12]>;
 #[cfg(target_pointer_width = "16")]
 pub type BoolVec = SmallVec<[bool; 6]>;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Datum {
     Bool(bool),
     Int(i32),
     CollectionOfInt(IntVec),
     CollectionOfBool(BoolVec),
+}
+impl Hash for Datum {
+    // implement Hash myself because I saw a spooky collision yesterday
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            &Datum::Bool(ref b) => {
+                state.write_u8(1);
+                state.write_u8(*b as u8);
+            }
+            &Datum::Int(ref i) => {
+                state.write_u8(2);
+                state.write_i32(*i);
+            }
+            &Datum::CollectionOfInt(ref vec) => {
+                state.write_u8(3);
+                for item in vec.as_slice() {
+                    state.write_i32(*item);
+                }
+            }
+            &Datum::CollectionOfBool(ref vec) => {
+                state.write_u8(4);
+                for item in vec.as_slice() {
+                    state.write_u8(*item as u8);
+                }
+            }
+        }
+    }
 }
 impl From<i32> for Datum {
     fn from(x: i32) -> Self {

@@ -277,8 +277,8 @@ fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
         _ => {
             // do recursive stuff for values > 2
             new_iter(
-                roll_dice3(num - 1, base_prob)
-                    .cartesian_product(Dice3::new().into_iter())
+                roll_dice6(num - 1, base_prob)
+                    .cartesian_product(Dice6::new().into_iter())
                     .map(joiner),
             )
         }

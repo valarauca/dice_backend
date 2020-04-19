@@ -36,6 +36,22 @@ impl<'a, 'b: 'a> Resolved<'a, 'b> {
     }
 }
 
+/// runs the program & builds the report
+pub fn build_report<'a, 'b: 'a>(coll: &'a InlinedCollection<'b>) -> Report {
+    let mut resolved = Resolved::default();
+
+    let ret = coll
+        .get_return()
+        .into_iter()
+        .flat_map(|expr| coll.get_expr(&expr))
+        .next()
+        .unwrap();
+    lambda_builder_recursive(&mut resolved, coll, ret);
+
+    let mut stack = Vec::<Iter>::new();
+    builder_recursive(&mut resolved, coll, ret, &mut stack).collect()
+}
+
 fn builder_recursive<'a, 'b: 'a>(
     resolve: &mut Resolved<'a, 'b>,
     coll: &'a InlinedCollection<'b>,
