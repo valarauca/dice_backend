@@ -5,13 +5,13 @@ use std::collections::BTreeMap;
 use super::expr::InlinedExpression;
 
 #[derive(Default)]
-pub struct InlinedCollection<'a> {
-    expr: BTreeMap<u64, InlinedExpression<'a>>,
+pub struct InlinedCollection {
+    expr: BTreeMap<u64, InlinedExpression>,
     ret: Option<u64>,
 }
-impl<'a> InlinedCollection<'a> {
+impl InlinedCollection {
     /// converts the ExpressionCollection into an inlined collection
-    pub fn new(arg: &ExpressionCollection<'a>) -> InlinedCollection<'a> {
+    pub fn new(arg: &ExpressionCollection<'_>) -> InlinedCollection {
         let mut stack = CallStack::new(arg);
         let mut coll = InlinedCollection::default();
         let return_expr = match arg.get_return() {
@@ -30,17 +30,17 @@ impl<'a> InlinedCollection<'a> {
     }
 
     /// returns an expression based on its hashed identifier
-    pub fn get_expr<'b>(&'b self, inlined_expr: &u64) -> Option<&'b InlinedExpression<'a>> {
+    pub fn get_expr<'b>(&'b self, inlined_expr: &u64) -> Option<&'b InlinedExpression> {
         self.expr.get(inlined_expr)
     }
 
     /// returns an iterator over the internal btreemap
-    pub fn get_expression_map<'b>(&'b self) -> Iter<'b, u64, InlinedExpression<'a>> {
+    pub fn get_expression_map<'b>(&'b self) -> Iter<'b, u64, InlinedExpression> {
         self.expr.iter()
     }
 
     /// inserts a hashed expression, and its InlinedExpression counter part.
-    pub fn insert_hash(&mut self, inlined: &InlinedExpression<'a>) {
+    pub fn insert_hash(&mut self, inlined: &InlinedExpression) {
         let inlined_hashed = inlined.get_hash();
         self.expr.insert(inlined_hashed.clone(), inlined.clone());
     }

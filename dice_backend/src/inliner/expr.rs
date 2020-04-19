@@ -9,13 +9,19 @@ use super::coll::InlinedCollection;
 
 /// Inlined Expression contains the very base values
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum InlinedExpression<'a> {
-    StdLibFunc(&'a str, Box<[u64]>),
+pub enum InlinedExpression {
+    D6(u64),
+    D3(u64),
+    Filter(u64, u64),
+    Count(u64),
+    Len(u64),
+    Join(u64, u64),
+    Sum(u64),
     Operation(u64, Operation, u64, TypeData),
     ConstantInt(i32),
     ConstantBool(bool),
 }
-impl<'a> InlinedExpression<'a> {
+impl<'a> InlinedExpression {
     /// returns the hash of the expression
     pub fn get_hash(&self) -> u64 {
         let mut hasher = SeaHasher::default();
@@ -26,8 +32,8 @@ impl<'a> InlinedExpression<'a> {
     pub fn new<'b>(
         expr: &'b HashedExpression<'a>,
         stack: &mut CallStack<'a, 'b>,
-        coll: &mut InlinedCollection<'a>,
-    ) -> InlinedExpression<'a> {
+        coll: &mut InlinedCollection,
+    ) -> InlinedExpression {
         let hash = expr.get_hash();
         let output = match expr {
             &HashedExpression::ConstantValue(Literal::EnvirBool(ref envir_name), _) => {
@@ -67,8 +73,8 @@ impl<'a> InlinedExpression<'a> {
                 // compose a function argument into
                 InlinedExpression::func_arg(index, stack, coll)
             }
-            &HashedExpression::Func(ref id, ref args, _) => {
-                InlinedExpression::func(id, args.as_ref(), &hash, stack, coll)
+            &HashedExpression::Func(ref id, ref args, ref kind) => {
+                InlinedExpression::func(id, args.as_ref(), &hash, stack, coll, kind)
             }
             &HashedExpression::Op(ref left, op, ref right, out) => {
                 // convert arguments into new format
@@ -148,8 +154,8 @@ impl<'a> InlinedExpression<'a> {
     fn variable<'b>(
         id: &Identifier,
         stack: &mut CallStack<'a, 'b>,
-        coll: &mut InlinedCollection<'a>,
-    ) -> InlinedExpression<'a> {
+        coll: &mut InlinedCollection,
+    ) -> InlinedExpression {
         stack
             .get_var(id)
             .into_iter()
@@ -162,8 +168,8 @@ impl<'a> InlinedExpression<'a> {
     fn func_arg<'b>(
         arg_index: &usize,
         stack: &mut CallStack<'a, 'b>,
-        coll: &mut InlinedCollection<'a>,
-    ) -> InlinedExpression<'a> {
+        coll: &mut InlinedCollection,
+    ) -> InlinedExpression {
         let context = stack.get_context().unwrap();
         let func_expr = stack.get_ctx_expr().unwrap();
         let arg_expr = stack.get_arg_index(*arg_index).unwrap();
@@ -179,21 +185,85 @@ impl<'a> InlinedExpression<'a> {
         args: &[u64],
         hash: &u64,
         stack: &mut CallStack<'a, 'b>,
-        coll: &mut InlinedCollection<'a>,
-    ) -> InlinedExpression<'a> {
+        coll: &mut InlinedCollection,
+        kind: &TypeData,
+    ) -> InlinedExpression {
         if stack.is_stdlib(id) {
-            let mut new_args = Vec::<u64>::with_capacity(args.len());
-            for arg in args.iter() {
-                let expr = match stack.get_expr(arg) {
-                    Option::None => _unreachable_panic!(),
-                    Option::Some(ref expr) => expr.clone(),
-                };
-                let expr = InlinedExpression::new(expr, stack, coll);
-                new_args.push(expr.get_hash());
+            match stack.get_function_name(id).unwrap() {
+                "roll_d6" => {
+                    debug_assert_eq!(*kind, TypeData::CollectionOfInt);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::Int);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::D6(arg.get_hash())
+                }
+                "roll_d3" => {
+                    debug_assert_eq!(*kind, TypeData::CollectionOfInt);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::Int);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::D3(arg.get_hash())
+                }
+                "filter" => {
+                    debug_assert_eq!(*kind, TypeData::CollectionOfInt);
+                    debug_assert_eq!(args.len(), 2);
+
+                    // filter arg 1
+                    let expr1 = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr1.get_type(), TypeData::CollectionOfBool);
+                    let arg1 = InlinedExpression::new(expr1, stack, coll);
+
+                    // filter arg 2
+                    let expr2 = stack.get_expr(&args[1]).unwrap();
+                    debug_assert_eq!(expr2.get_type(), TypeData::CollectionOfInt);
+                    let arg2 = InlinedExpression::new(expr2, stack, coll);
+
+                    InlinedExpression::Filter(arg1.get_hash(), arg2.get_hash())
+                }
+                "count" => {
+                    debug_assert_eq!(*kind, TypeData::Int);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::CollectionOfBool);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::Count(arg.get_hash())
+                }
+                "len" => {
+                    debug_assert_eq!(*kind, TypeData::Int);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::CollectionOfInt);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::Len(arg.get_hash())
+                }
+                "join" => {
+                    debug_assert_eq!(*kind, TypeData::CollectionOfInt);
+                    debug_assert_eq!(args.len(), 2);
+
+                    // join arg 1
+                    let expr1 = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr1.get_type(), TypeData::CollectionOfInt);
+                    let arg1 = InlinedExpression::new(expr1, stack, coll);
+
+                    // join arg 2
+                    let expr2 = stack.get_expr(&args[1]).unwrap();
+                    debug_assert_eq!(expr2.get_type(), TypeData::CollectionOfInt);
+                    let arg2 = InlinedExpression::new(expr2, stack, coll);
+
+                    InlinedExpression::Join(arg1.get_hash(), arg2.get_hash())
+                }
+                "sum" => {
+                    debug_assert_eq!(*kind, TypeData::Int);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::CollectionOfInt);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::Sum(arg.get_hash())
+                }
+                _ => panic!("item is not a part of the standard library"),
             }
-            let new_args = new_args.into_boxed_slice();
-            let name = stack.get_function_name(id).unwrap();
-            InlinedExpression::StdLibFunc(name, new_args)
         } else {
             stack.push(id, &hash);
             let output = stack

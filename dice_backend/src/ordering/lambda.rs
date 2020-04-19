@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
-use super::super::smallvec::{SmallVec};
 use super::super::itertools::Itertools;
+use super::super::smallvec::SmallVec;
 
 use super::super::seahasher::DefaultSeaHasher;
 use super::{BoolVec, Datum, Dice3, Dice6, Element, IntVec, Rational};
@@ -213,19 +213,19 @@ pub fn join() -> Combinator {
     new_combin(move |i1: Iter, i2: Iter| -> Iter {
         let lambda = |a: (Element, Element)| -> Element {
             let ((datum1, prob1), (datum2, prob2)) = (a.0.split(), a.1.split());
-            let joined = match (datum1,datum2) {
-                (Datum::CollectionOfInt(a),Datum::CollectionOfInt(b)) => {
+            let joined = match (datum1, datum2) {
+                (Datum::CollectionOfInt(a), Datum::CollectionOfInt(b)) => {
                     let mut a = a;
                     a.extend(b);
                     a
-                },
-                (a,b) => {
-                    _unreachable_panic!("expected 2 collections of int, found ({:?},{:?})", a,b);
+                }
+                (a, b) => {
+                    _unreachable_panic!("expected 2 collections of int, found ({:?},{:?})", a, b);
                 }
             };
             Element::new(joined, prob1 * prob2)
         };
-        let vec_builder = |iter: Iter| -> SmallVec<[Element;1]> {
+        let vec_builder = |iter: Iter| -> SmallVec<[Element; 1]> {
             let mut v = SmallVec::new();
             v.extend(iter);
             v

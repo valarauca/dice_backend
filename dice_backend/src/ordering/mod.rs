@@ -17,7 +17,7 @@ pub use self::coll::build_report;
 #[test]
 fn test_1d6() {
     use super::cfgbuilder::{ExpressionCollection, HashedExpression};
-    use super::inliner::{InlinedCollection,InlinedExpression};
+    use super::inliner::{InlinedCollection, InlinedExpression};
     use super::namespace::Namespace;
     use super::parser_output::{AbstractSyntaxTree, Literal, Operation, TypeData};
 
@@ -94,7 +94,7 @@ fn test_2d6() {
 #[test]
 fn test_2d6_join() {
     use super::cfgbuilder::{ExpressionCollection, HashedExpression};
-    use super::inliner::{InlinedCollection,InlinedExpression};
+    use super::inliner::{InlinedCollection, InlinedExpression};
     use super::namespace::Namespace;
     use super::parser_output::{AbstractSyntaxTree, Literal, Operation, TypeData};
 
@@ -110,30 +110,30 @@ fn test_2d6_join() {
     };
     let cfgcoll = ExpressionCollection::new(&namespace);
     let inlinecoll = InlinedCollection::new(&cfgcoll);
-    
+
     /*
      * Validate the inline collection
      *
      */
     {
-        let sum_expr = match inlinecoll.get_return().into_iter().flat_map(|expr| inlinecoll.get_expr(&expr)).next().unwrap() {
-            InlinedExpression::StdLibFunc("sum", ref args) => {
-                assert_eq!(args.len(), 1);
-                args[0].clone()
-            },
+        let sum_expr = match inlinecoll
+            .get_return()
+            .into_iter()
+            .flat_map(|expr| inlinecoll.get_expr(&expr))
+            .next()
+            .unwrap()
+        {
+            InlinedExpression::Sum(arg) => arg,
             anything_else => panic!("{:?}", anything_else),
         };
         match inlinecoll.get_expr(&sum_expr).unwrap() {
-            InlinedExpression::StdLibFunc("join", ref args) => {
-                assert_eq!(args.len(), 2);
-                assert_eq!(args[0], args[1]);
-                match inlinecoll.get_expr(&args[0]).unwrap() {
-                    InlinedExpression::StdLibFunc("roll_d6", ref args) => {
-                        assert_eq!(args.len(), 1);
-                    },
-                    anything_else => panic!("{:?}", anything_else)
+            InlinedExpression::Join(a, b) => {
+                assert_eq!(a, b);
+                match inlinecoll.get_expr(&a).unwrap() {
+                    InlinedExpression::D6(_) => {}
+                    anything_else => panic!("{:?}", anything_else),
                 };
-            },
+            }
             anything_else => panic!("{:?}", anything_else),
         };
     }
@@ -159,6 +159,3 @@ fn test_2d6_join() {
         Err(e) => panic!("{:?}", e),
     };
 }
-
-
-

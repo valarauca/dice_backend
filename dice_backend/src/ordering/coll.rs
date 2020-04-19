@@ -7,11 +7,11 @@ use super::super::parser_output::{Operation, TypeData};
 use super::*;
 
 #[derive(Default)]
-pub struct Resolved<'a, 'b: 'a> {
-    pub data: BTreeMap<&'a InlinedExpression<'b>, LambdaKind>,
+pub struct Resolved<'a> {
+    pub data: BTreeMap<&'a InlinedExpression, LambdaKind>,
 }
-impl<'a, 'b: 'a> Resolved<'a, 'b> {
-    fn mark_idempotent(&mut self, expr: &&'a InlinedExpression<'b>) {
+impl<'a> Resolved<'a> {
+    fn mark_idempotent(&mut self, expr: &&'a InlinedExpression) {
         match self.data.get_mut(expr) {
             Option::Some(ref mut lambda_kind) => {
                 lambda_kind.make_idempotent();
@@ -20,15 +20,15 @@ impl<'a, 'b: 'a> Resolved<'a, 'b> {
         };
     }
 
-    fn contains(&self, expr: &&'a InlinedExpression<'b>) -> bool {
+    fn contains(&self, expr: &&'a InlinedExpression) -> bool {
         self.data.get(expr).is_some()
     }
 
-    fn insert(&mut self, expr: &'a InlinedExpression<'b>, lambda: LambdaKind) {
+    fn insert(&mut self, expr: &'a InlinedExpression, lambda: LambdaKind) {
         self.data.insert(expr, lambda);
     }
 
-    fn resolve(&mut self, expr: &&'a InlinedExpression<'b>, args: &mut Vec<Iter>) -> Iter {
+    fn resolve(&mut self, expr: &&'a InlinedExpression, args: &mut Vec<Iter>) -> Iter {
         match self.data.get_mut(expr) {
             Option::Some(ref mut lambda_kind) => lambda_kind.get_iter(args),
             Option::None => _unreachable_panic!(),
@@ -37,7 +37,7 @@ impl<'a, 'b: 'a> Resolved<'a, 'b> {
 }
 
 /// runs the program & builds the report
-pub fn build_report<'a, 'b: 'a>(coll: &'a InlinedCollection<'b>) -> Report {
+pub fn build_report<'a>(coll: &'a InlinedCollection) -> Report {
     let mut resolved = Resolved::default();
 
     let ret = coll
@@ -52,72 +52,53 @@ pub fn build_report<'a, 'b: 'a>(coll: &'a InlinedCollection<'b>) -> Report {
     builder_recursive(&mut resolved, coll, ret, &mut stack).collect()
 }
 
-fn builder_recursive<'a, 'b: 'a>(
-    resolve: &mut Resolved<'a, 'b>,
-    coll: &'a InlinedCollection<'b>,
-    expr: &'a InlinedExpression<'b>,
+fn builder_recursive<'a>(
+    resolve: &mut Resolved<'a>,
+    coll: &'a InlinedCollection,
+    expr: &'a InlinedExpression,
     stack: &mut Vec<Iter>,
 ) -> Iter {
     match expr {
         &InlinedExpression::ConstantBool(_) => resolve.resolve(&expr, stack),
         &InlinedExpression::ConstantInt(ref i) => resolve.resolve(&expr, stack),
-        &InlinedExpression::StdLibFunc("roll_d6", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            let arg_iter =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::D6(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
             stack.push(arg_iter);
             resolve.resolve(&expr, stack)
         }
-        &InlinedExpression::StdLibFunc("roll_d3", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            let arg_iter =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::D3(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
             stack.push(arg_iter);
             resolve.resolve(&expr, stack)
         }
-        &InlinedExpression::StdLibFunc("count", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            let arg_iter =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::Count(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
             stack.push(arg_iter);
             resolve.resolve(&expr, stack)
         }
-        &InlinedExpression::StdLibFunc("len", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            let arg_iter =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::Len(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
             stack.push(arg_iter);
             resolve.resolve(&expr, stack)
         }
-        &InlinedExpression::StdLibFunc("join", ref args) => {
-            debug_assert_eq!(args.len(), 2);
-            let arg_iter2 =
-                builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap(), stack);
-            let arg_iter1 =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::Join(ref a, ref b) => {
+            let arg_iter2 = builder_recursive(resolve, coll, coll.get_expr(b).unwrap(), stack);
+            let arg_iter1 = builder_recursive(resolve, coll, coll.get_expr(a).unwrap(), stack);
             stack.push(arg_iter2);
             stack.push(arg_iter1);
             resolve.resolve(&expr, stack)
         }
-        &InlinedExpression::StdLibFunc("sum", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            let arg_iter =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::Sum(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
             stack.push(arg_iter);
             resolve.resolve(&expr, stack)
         }
-        &InlinedExpression::StdLibFunc("filter", ref args) => {
-            debug_assert_eq!(args.len(), 2);
-            let arg_iter2 =
-                builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap(), stack);
-            let arg_iter1 =
-                builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap(), stack);
+        &InlinedExpression::Filter(ref a, ref b) => {
+            let arg_iter2 = builder_recursive(resolve, coll, coll.get_expr(b).unwrap(), stack);
+            let arg_iter1 = builder_recursive(resolve, coll, coll.get_expr(a).unwrap(), stack);
             stack.push(arg_iter2);
             stack.push(arg_iter1);
             resolve.resolve(&expr, stack)
-        }
-        &InlinedExpression::StdLibFunc(ref name, _) => {
-            panic!("invalid standard library function named {:?}", name);
         }
         &InlinedExpression::Operation(ref left, Operation::Add, ref right, TypeData::Int) => {
             panic!("invalid expression")
@@ -357,10 +338,10 @@ fn builder_recursive<'a, 'b: 'a>(
 }
 
 /// shoves thing into our resolve structure
-fn lambda_builder_recursive<'a, 'b: 'a>(
-    resolve: &mut Resolved<'a, 'b>,
-    coll: &'a InlinedCollection<'b>,
-    expr: &'a InlinedExpression<'b>,
+fn lambda_builder_recursive<'a>(
+    resolve: &mut Resolved<'a>,
+    coll: &'a InlinedCollection,
+    expr: &'a InlinedExpression,
 ) {
     if resolve.contains(&expr) {
         // updates collection so value is idempotent
@@ -374,46 +355,35 @@ fn lambda_builder_recursive<'a, 'b: 'a>(
         &InlinedExpression::ConstantInt(ref i) => {
             resolve.insert(expr, LambdaKind::Init(const_int(i.clone())))
         }
-        &InlinedExpression::StdLibFunc("roll_d6", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            // build the argument
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            // insert self
+        &InlinedExpression::D6(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
             resolve.insert(expr, LambdaKind::Chain(d6()));
         }
-        &InlinedExpression::StdLibFunc("roll_d3", ref args) => {
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+        &InlinedExpression::D3(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
             resolve.insert(expr, LambdaKind::Chain(d3()));
         }
-        &InlinedExpression::StdLibFunc("count", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+        &InlinedExpression::Count(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
             resolve.insert(expr, LambdaKind::Chain(count()));
         }
-        &InlinedExpression::StdLibFunc("len", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+        &InlinedExpression::Len(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
             resolve.insert(expr, LambdaKind::Chain(len()));
         }
-        &InlinedExpression::StdLibFunc("join", ref args) => {
-            debug_assert_eq!(args.len(), 2);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap());
+        &InlinedExpression::Join(ref a, ref b) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(a).unwrap());
+            lambda_builder_recursive(resolve, coll, coll.get_expr(b).unwrap());
             resolve.insert(expr, LambdaKind::Combinator(join()));
         }
-        &InlinedExpression::StdLibFunc("sum", ref args) => {
-            debug_assert_eq!(args.len(), 1);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
+        &InlinedExpression::Sum(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
             resolve.insert(expr, LambdaKind::Chain(sum()));
         }
-        &InlinedExpression::StdLibFunc("filter", ref args) => {
-            debug_assert_eq!(args.len(), 2);
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[0]).unwrap());
-            lambda_builder_recursive(resolve, coll, coll.get_expr(&args[1]).unwrap());
+        &InlinedExpression::Filter(ref a, ref b) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(a).unwrap());
+            lambda_builder_recursive(resolve, coll, coll.get_expr(b).unwrap());
             resolve.insert(expr, LambdaKind::Combinator(filter()));
-        }
-        &InlinedExpression::StdLibFunc(ref name, _) => {
-            panic!("invalid standard library function named {:?}", name);
         }
         &InlinedExpression::Operation(ref left, Operation::Add, ref right, TypeData::Int) => {
             panic!("invalid expression")
