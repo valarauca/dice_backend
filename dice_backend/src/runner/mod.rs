@@ -35,8 +35,7 @@ analyze ((A + B) + C);
     // start inspecting the program
     let return_id = coll.get_return().unwrap();
     match coll.get_expr(&return_id) {
-        Option::Some(InlinedExpression::ConstantInt(20)) => {
-        },
+        Option::Some(InlinedExpression::ConstantInt(20)) => {}
         anything_else => {
             panic!("expected a constant value, found '{:?}'", anything_else);
         }
@@ -77,14 +76,12 @@ analyze lol_add(5,lol_add(5,5));
 
     let return_id = coll.get_return().unwrap();
     match coll.get_expr(&return_id) {
-        Option::Some(InlinedExpression::ConstantInt(35)) => {
-        },
+        Option::Some(InlinedExpression::ConstantInt(35)) => {}
         anything_else => {
             panic!("expected a constant value, found '{:?}'");
         }
     };
 }
-
 
 #[test]
 fn complex_inling() {
@@ -130,7 +127,7 @@ analyze lol_add(4,0);
     match coll.get_expr(&return_id) {
         Option::Some(InlinedExpression::ConstantInt(4)) => {
             // TODO: fix this test
-        },
+        }
         anything_else => {
             panic!("expected a constant value, found '{:?}'", anything_else);
         }

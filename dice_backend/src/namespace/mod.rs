@@ -10,7 +10,7 @@ pub use self::namespace::Namespace;
 
 #[test]
 fn test_complex_example() {
-    use super::parser_output::{AbstractSyntaxTree,TypeData,Expression,FunctionInvocation};
+    use super::parser_output::{AbstractSyntaxTree, Expression, FunctionInvocation, TypeData};
     let trivial_program = r#"
 
 const FIVE: int = 5;
@@ -50,8 +50,8 @@ analyze lol_add(4,0);
             assert_eq!(func.name, "lol_add");
             // assert the number of arguments
             assert_eq!(func.args.len(), 2);
-        },
-        anything_else => panic!("{:?}", anything_else)
+        }
+        anything_else => panic!("{:?}", anything_else),
     };
 }
 

@@ -46,19 +46,19 @@ analyze lol_add(4,0);
 
             // check the function's arguments
             // `analyze lol_add(4,0)` means this should be `4`
-            match cfgcoll.get_expr(None,&args[0]).unwrap() {
-                &HashedExpression::ConstantValue(Literal::Number(4),TypeData::Int) => { },
+            match cfgcoll.get_expr(None, &args[0]).unwrap() {
+                &HashedExpression::ConstantValue(Literal::Number(4), TypeData::Int) => {}
                 anything_else => panic!("expected a constant of 4, found {:?}"),
             };
             // check the function's arguments
             // `analyze lol_add(4,0)` means this should be `0`
-            match cfgcoll.get_expr(None,&args[1]).unwrap() {
-                &HashedExpression::ConstantValue(Literal::Number(0),TypeData::Int) => { },
+            match cfgcoll.get_expr(None, &args[1]).unwrap() {
+                &HashedExpression::ConstantValue(Literal::Number(0), TypeData::Int) => {}
                 anything_else => panic!("expected a constant of 0, found {:?}", anything_else),
             };
             id
-        },
-        anything_else => panic!("expected a function found:'{:?}'", anything_else)
+        }
+        anything_else => panic!("expected a function found:'{:?}'", anything_else),
     };
 
     // step into the context of `lol_add(x,y)`
@@ -71,37 +71,46 @@ analyze lol_add(4,0);
             // return ( ( lol_sub(x) + lol_sub(y) ) + TEN);
             // ten is a global var so we need to use the full context
             match lol_add_ctx.get_expr(Some(*lol_add_id), right) {
-                Option::Some(HashedExpression::ExternalConstant(ref id, TypeData::Int)) => { },
-                anything_else => panic!("expected a constant, found {:?}", anything_else)
+                Option::Some(HashedExpression::ExternalConstant(ref id, TypeData::Int)) => {}
+                anything_else => panic!("expected a constant, found {:?}", anything_else),
             };
             // the left is another addition
             // ( lol_sub(x) + lol_sub(y) )
             match lol_add_ctx.get_expr(Some(*lol_add_id), left) {
-                Option::Some(HashedExpression::Op(ref left, Operation::Add, ref right, TypeData::Int)) => {
-
+                Option::Some(HashedExpression::Op(
+                    ref left,
+                    Operation::Add,
+                    ref right,
+                    TypeData::Int,
+                )) => {
                     // left is a call of `lol_sub(x)`
                     let (left_id, left_args) = match lol_add_ctx.get_expr(Some(*lol_add_id), left) {
-                        Option::Some(HashedExpression::Func(ref left_id, ref left_args, TypeData::Int)) => {
-                            (left_id,left_args)
-                        },
-                        anything_else => panic!("{:?}", anything_else)
+                        Option::Some(HashedExpression::Func(
+                            ref left_id,
+                            ref left_args,
+                            TypeData::Int,
+                        )) => (left_id, left_args),
+                        anything_else => panic!("{:?}", anything_else),
                     };
                     // left is a call of `lol_sub(y)`
-                    let (right_id, right_args) = match lol_add_ctx.get_expr(Some(*lol_add_id), right) {
-                        Option::Some(HashedExpression::Func(ref right_id, ref right_args, TypeData::Int)) => {
-                            (right_id, right_args)
-                        },
-                        anything_else => panic!("{:?}", anything_else)
-                    };
+                    let (right_id, right_args) =
+                        match lol_add_ctx.get_expr(Some(*lol_add_id), right) {
+                            Option::Some(HashedExpression::Func(
+                                ref right_id,
+                                ref right_args,
+                                TypeData::Int,
+                            )) => (right_id, right_args),
+                            anything_else => panic!("{:?}", anything_else),
+                        };
                     // assert the 2 functions are the same
                     assert!(right_id == left_id);
                     // assert the arguments are different
                     assert!(left_args != right_args);
-                },
-                anything_else => panic!("{:?}", anything_else)
+                }
+                anything_else => panic!("{:?}", anything_else),
             };
         }
-        anything_else => panic!("expected an op, found {:?}", anything_else)
+        anything_else => panic!("expected an op, found {:?}", anything_else),
     };
 }
 
@@ -161,7 +170,7 @@ analyze sum(reroll_1(roll(MAX,MIN,10)));
             // named reroll 1
             assert_eq!(cfgcoll.get_function_name(id), Some("reroll_1"));
             // not in stdlib
-            assert!( !cfgcoll.is_function_stdlib(id)); 
+            assert!(!cfgcoll.is_function_stdlib(id));
             // has 1 argument
             assert_eq!(args.len(), 1);
             (id.clone(), args.clone(), kind.clone())
@@ -174,17 +183,16 @@ analyze sum(reroll_1(roll(MAX,MIN,10)));
      *
      */
 
-    let (id, args, kind) = match cfgcoll.get_expr(None,&args[0]) {
+    let (id, args, kind) = match cfgcoll.get_expr(None, &args[0]) {
         Option::Some(HashedExpression::Func(ref id, ref args, ref kind)) => {
             assert_eq!(kind.clone(), TypeData::CollectionOfInt);
             assert_eq!(cfgcoll.get_function_name(id), Some("roll"));
             assert!(cfgcoll.is_function_stdlib(id));
             assert_eq!(args.len(), 3);
             (id.clone(), args.clone(), kind.clone())
-        },
-        anything_else => panic!("Expected roll function. Found: {:?}", anything_else)
+        }
+        anything_else => panic!("Expected roll function. Found: {:?}", anything_else),
     };
-
 
     /*
      * Inspect the arguments of roll(MAX, MIN, 10)
@@ -251,7 +259,7 @@ analyze sum(reroll_1(roll(MAX,MIN,10)));
             // named reroll 1
             assert_eq!(cfgcoll.get_function_name(id), Some("reroll_1"));
             // not in stdlib
-            assert!( !cfgcoll.is_function_stdlib(id)); 
+            assert!(!cfgcoll.is_function_stdlib(id));
             // has 1 argument
             assert_eq!(args.len(), 1);
             (id.clone(), args.clone(), kind.clone())
@@ -270,7 +278,7 @@ analyze sum(reroll_1(roll(MAX,MIN,10)));
         _ => panic!("expected a function context"),
     };
 
-    /* 
+    /*
      * Our returned result flows from `join`
      *
      */
@@ -290,13 +298,10 @@ analyze sum(reroll_1(roll(MAX,MIN,10)));
      * first argument of `join` is a variable
      *
      */
-    match ctx.get_expr(Some(id),&args[0]).unwrap() {
+    match ctx.get_expr(Some(id), &args[0]).unwrap() {
         HashedExpression::Var(ref id, ref kind) => {
             assert_eq!(kind.clone(), TypeData::CollectionOfInt);
-        },
-        anything_else => panic!("expecting a var {:?}", anything_else)
+        }
+        anything_else => panic!("expecting a var {:?}", anything_else),
     };
-
-
-
 }

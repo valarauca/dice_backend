@@ -6,8 +6,8 @@
     unused_parens
 )]
 extern crate clap;
+extern crate itertools;
 extern crate lalrpop_util;
-extern crate rayon;
 extern crate regex;
 extern crate seahash;
 use clap::{App, Arg, SubCommand};
@@ -23,10 +23,9 @@ mod formatter;
 mod namespace;
 mod ordering;
 mod runner;
-mod seahasher;
+pub mod seahasher;
 mod syntaxhelper;
 mod validator;
-//mod exec;
 
 fn main() {
     let matches = App::new("foxhole")

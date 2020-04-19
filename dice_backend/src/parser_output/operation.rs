@@ -30,7 +30,7 @@ impl fmt::Display for Operation {
             Operation::LessThan => write!(f, "<"),
             Operation::GreaterThanEqual => write!(f, ">="),
             Operation::LessThanEqual => write!(f, "<="),
-            Operation::NotEqual => write!(f,"!="),
+            Operation::NotEqual => write!(f, "!="),
         }
     }
 }

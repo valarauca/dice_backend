@@ -32,26 +32,32 @@ impl<'a> InlinedExpression<'a> {
         let output = match expr {
             &HashedExpression::ConstantValue(Literal::EnvirBool(ref envir_name), _) => {
                 let b = ::std::env::vars()
-                    .filter(|(name,_)| envir_name == name)
-                    .flat_map(|(_,var)| bool::from_str(&var).ok())
+                    .filter(|(name, _)| envir_name == name)
+                    .flat_map(|(_, var)| bool::from_str(&var).ok())
                     .next()
-                    .expect(&format!("could not fine value {} in environment", envir_name));
+                    .expect(&format!(
+                        "could not fine value {} in environment",
+                        envir_name
+                    ));
                 InlinedExpression::ConstantBool(b)
-            },
+            }
             &HashedExpression::ConstantValue(Literal::EnvirNumber(ref envir_name), _) => {
                 let i = ::std::env::vars()
-                    .filter(|(name,_)| envir_name == name)
-                    .flat_map(|(_,var)| i32::from_str(&var).ok())
+                    .filter(|(name, _)| envir_name == name)
+                    .flat_map(|(_, var)| i32::from_str(&var).ok())
                     .next()
-                    .expect(&format!("could not fine value {} in environment", envir_name));
+                    .expect(&format!(
+                        "could not fine value {} in environment",
+                        envir_name
+                    ));
                 InlinedExpression::ConstantInt(i)
-            },
+            }
             &HashedExpression::ConstantValue(Literal::Number(i), _) => {
                 InlinedExpression::ConstantInt(i as i32)
-            },
-            &HashedExpression::ConstantValue(Literal::Boolean(b),_) => {
+            }
+            &HashedExpression::ConstantValue(Literal::Boolean(b), _) => {
                 InlinedExpression::ConstantBool(b)
-            },
+            }
             &HashedExpression::ExternalConstant(ref id, _) | &HashedExpression::Var(ref id, _) => {
                 // resolve the expression that defines the variable
                 // convert that recursively
@@ -68,60 +74,64 @@ impl<'a> InlinedExpression<'a> {
                 // convert arguments into new format
                 let left = InlinedExpression::new(stack.get_expr(left).unwrap(), stack, coll);
                 let right = InlinedExpression::new(stack.get_expr(right).unwrap(), stack, coll);
-                match (left,right) {
-                    (InlinedExpression::ConstantBool(l),InlinedExpression::ConstantBool(r)) => {
+                match (left, right) {
+                    (InlinedExpression::ConstantBool(l), InlinedExpression::ConstantBool(r)) => {
                         match (out, op) {
                             (TypeData::Bool, Operation::And) => {
-                                InlinedExpression::ConstantBool(l & r) 
-                            },
-                            (TypeData::Bool,Operation::Or) => {
+                                InlinedExpression::ConstantBool(l & r)
+                            }
+                            (TypeData::Bool, Operation::Or) => {
                                 InlinedExpression::ConstantBool(l | r)
-                            },
+                            }
                             _ => panic!("other boolean expressions are not possible"),
                         }
                     }
-                    (InlinedExpression::ConstantInt(left),InlinedExpression::ConstantInt(right)) => {
-                        match (out, op) {
-                            (TypeData::Int, Operation::Add) => {
-                                InlinedExpression::ConstantInt(left + right)
-                            },
-                            (TypeData::Int, Operation::Sub) => {
-                                InlinedExpression::ConstantInt(left - right)
-                            },
-                            (TypeData::Int, Operation::Mul) => {
-                                InlinedExpression::ConstantInt(left * right)
-                            },
-                            (TypeData::Int, Operation::Div) => {
-                                InlinedExpression::ConstantInt(left / right)
-                            },
-                            (TypeData::Int, Operation::Or) => {
-                                InlinedExpression::ConstantInt(left | right)
-                            },
-                            (TypeData::Int, Operation::And) => {
-                                InlinedExpression::ConstantInt(left & right)
-                            },
-                            (TypeData::Bool, Operation::Equal) => {
-                                InlinedExpression::ConstantBool(left == right)
-                            },
-                            (TypeData::Bool, Operation::GreaterThan) => {
-                                InlinedExpression::ConstantBool(left > right)
-                            },
-                            (TypeData::Bool, Operation::LessThan) => {
-                                InlinedExpression::ConstantBool(left < right)
-                            },
-                            (TypeData::Bool, Operation::GreaterThanEqual) => {
-                                InlinedExpression::ConstantBool(left >= right)
-                            },
-                            (TypeData::Bool, Operation::LessThanEqual) => {
-                                InlinedExpression::ConstantBool(left <= right)
-                            },
-                            _ => panic!("illegal interger operation"),
+                    (
+                        InlinedExpression::ConstantInt(left),
+                        InlinedExpression::ConstantInt(right),
+                    ) => match (out, op) {
+                        (TypeData::Int, Operation::Add) => {
+                            InlinedExpression::ConstantInt(left + right)
                         }
-                    }
-                    (left,right) => {
-                        InlinedExpression::Operation(left.get_hash(), op, right.get_hash(), out)
+                        (TypeData::Int, Operation::Sub) => {
+                            InlinedExpression::ConstantInt(left - right)
+                        }
+                        (TypeData::Int, Operation::Mul) => {
+                            InlinedExpression::ConstantInt(left * right)
+                        }
+                        (TypeData::Int, Operation::Div) => {
+                            InlinedExpression::ConstantInt(left / right)
+                        }
+                        (TypeData::Int, Operation::Or) => {
+                            InlinedExpression::ConstantInt(left | right)
+                        }
+                        (TypeData::Int, Operation::And) => {
+                            InlinedExpression::ConstantInt(left & right)
+                        }
+                        (TypeData::Bool, Operation::Equal) => {
+                            InlinedExpression::ConstantBool(left == right)
+                        }
+                        (TypeData::Bool, Operation::GreaterThan) => {
+                            InlinedExpression::ConstantBool(left > right)
+                        }
+                        (TypeData::Bool, Operation::LessThan) => {
+                            InlinedExpression::ConstantBool(left < right)
+                        }
+                        (TypeData::Bool, Operation::GreaterThanEqual) => {
+                            InlinedExpression::ConstantBool(left >= right)
+                        }
+                        (TypeData::Bool, Operation::LessThanEqual) => {
+                            InlinedExpression::ConstantBool(left <= right)
+                        }
+                        _ => panic!("illegal interger operation"),
                     },
-                    anything_else => _unreachable_panic!("illegal operation. Should be caught by type checker. {:?}", anything_else)
+                    (left, right) => {
+                        InlinedExpression::Operation(left.get_hash(), op, right.get_hash(), out)
+                    }
+                    anything_else => _unreachable_panic!(
+                        "illegal operation. Should be caught by type checker. {:?}",
+                        anything_else
+                    ),
                 }
             }
         };
