@@ -109,24 +109,6 @@ impl<'a> Namespace<'a> {
             },
         );
         self.functions.insert(
-            "reroll",
-            FunctionDeclaration {
-                stdlib: true,
-                name: "reroll",
-                args: vec![
-                    ("max_value_roll_can_return_inclusive", TypeData::Int),
-                    ("min_value_roll_can_return_inclusive", TypeData::Int),
-                    ("filters_to_reroll", TypeData::CollectionOfBool),
-                    ("collection_to_be_re_rolled", TypeData::CollectionOfInt),
-                ]
-                .into_boxed_slice(),
-                ret: TypeData::CollectionOfInt,
-                body: Statements {
-                    data: vec![].into_boxed_slice(),
-                },
-            },
-        );
-        self.functions.insert(
             "roll",
             FunctionDeclaration {
                 stdlib: true,
@@ -156,7 +138,7 @@ impl<'a> Namespace<'a> {
                     ("collection_of_data_to_filter", TypeData::CollectionOfInt),
                 ]
                 .into_boxed_slice(),
-                ret: TypeData::CollectionOfBool,
+                ret: TypeData::CollectionOfInt,
                 body: Statements {
                     data: vec![].into_boxed_slice(),
                 },
@@ -170,6 +152,34 @@ impl<'a> Namespace<'a> {
                 args: vec![("collection_to_sum_over", TypeData::CollectionOfBool)]
                     .into_boxed_slice(),
                 ret: TypeData::Int,
+                body: Statements {
+                    data: vec![].into_boxed_slice(),
+                },
+            },
+        );
+        self.functions.insert(
+            "len",
+            FunctionDeclaration {
+                stdlib: true,
+                name: "len",
+                args: vec![("length_of_collection", TypeData::CollectionOfInt)].into_boxed_slice(),
+                ret: TypeData::Int,
+                body: Statements {
+                    data: vec![].into_boxed_slice(),
+                },
+            },
+        );
+        self.functions.insert(
+            "join",
+            FunctionDeclaration {
+                stdlib: true,
+                name: "join",
+                args: vec![
+                    ("join_collection_over_a", TypeData::CollectionOfInt),
+                    ("join_collection_over_b", TypeData::CollectionOfInt),
+                ]
+                .into_boxed_slice(),
+                ret: TypeData::CollectionOfInt,
                 body: Statements {
                     data: vec![].into_boxed_slice(),
                 },

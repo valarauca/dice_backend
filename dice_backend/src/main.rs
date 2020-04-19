@@ -6,8 +6,8 @@
     unused_parens
 )]
 extern crate clap;
+extern crate itertools;
 extern crate lalrpop_util;
-extern crate rayon;
 extern crate regex;
 extern crate seahash;
 use clap::{App, Arg, SubCommand};
@@ -19,12 +19,11 @@ pub mod parser_output;
 mod value;
 
 mod cfgbuilder;
-mod exec;
 mod formatter;
 mod namespace;
 mod ordering;
 mod runner;
-mod seahasher;
+pub mod seahasher;
 mod syntaxhelper;
 mod validator;
 

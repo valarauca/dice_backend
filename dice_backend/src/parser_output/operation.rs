@@ -14,6 +14,7 @@ pub enum Operation {
     LessThan,
     GreaterThanEqual,
     LessThanEqual,
+    NotEqual,
 }
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -29,6 +30,7 @@ impl fmt::Display for Operation {
             Operation::LessThan => write!(f, "<"),
             Operation::GreaterThanEqual => write!(f, ">="),
             Operation::LessThanEqual => write!(f, "<="),
+            Operation::NotEqual => write!(f, "!="),
         }
     }
 }

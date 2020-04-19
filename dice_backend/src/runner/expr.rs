@@ -1,4 +1,5 @@
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 use super::super::cfgbuilder::{CallStack, ExpressionCollection, HashedExpression, Identifier};
 use super::super::parser_output::{Literal, Operation, TypeData};
@@ -10,8 +11,9 @@ use super::coll::InlinedCollection;
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InlinedExpression<'a> {
     StdLibFunc(&'a str, Box<[u64]>),
-    Operation(u64, Operation, u64),
-    Constant(Literal<'a>),
+    Operation(u64, Operation, u64, TypeData),
+    ConstantInt(i32),
+    ConstantBool(bool),
 }
 impl<'a> InlinedExpression<'a> {
     /// returns the hash of the expression
@@ -26,13 +28,35 @@ impl<'a> InlinedExpression<'a> {
         stack: &mut CallStack<'a, 'b>,
         coll: &mut InlinedCollection<'a>,
     ) -> InlinedExpression<'a> {
-        let hash = match coll.get_from_hashed(expr) {
-            (hash, Option::Some(expr)) => return expr.clone(),
-            (hash, Option::None) => hash,
-        };
+        let hash = expr.get_hash();
         let output = match expr {
-            &HashedExpression::ConstantValue(ref literal, _) => {
-                Some(InlinedExpression::Constant(literal.clone()))
+            &HashedExpression::ConstantValue(Literal::EnvirBool(ref envir_name), _) => {
+                let b = ::std::env::vars()
+                    .filter(|(name, _)| envir_name == name)
+                    .flat_map(|(_, var)| bool::from_str(&var).ok())
+                    .next()
+                    .expect(&format!(
+                        "could not fine value {} in environment",
+                        envir_name
+                    ));
+                InlinedExpression::ConstantBool(b)
+            }
+            &HashedExpression::ConstantValue(Literal::EnvirNumber(ref envir_name), _) => {
+                let i = ::std::env::vars()
+                    .filter(|(name, _)| envir_name == name)
+                    .flat_map(|(_, var)| i32::from_str(&var).ok())
+                    .next()
+                    .expect(&format!(
+                        "could not fine value {} in environment",
+                        envir_name
+                    ));
+                InlinedExpression::ConstantInt(i)
+            }
+            &HashedExpression::ConstantValue(Literal::Number(i), _) => {
+                InlinedExpression::ConstantInt(i as i32)
+            }
+            &HashedExpression::ConstantValue(Literal::Boolean(b), _) => {
+                InlinedExpression::ConstantBool(b)
             }
             &HashedExpression::ExternalConstant(ref id, _) | &HashedExpression::Var(ref id, _) => {
                 // resolve the expression that defines the variable
@@ -47,80 +71,72 @@ impl<'a> InlinedExpression<'a> {
                 InlinedExpression::func(id, args.as_ref(), &hash, stack, coll)
             }
             &HashedExpression::Op(ref left, op, ref right, out) => {
-                match (stack.get_expr(left), stack.get_expr(right)) {
-                    (Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref left),TypeData::Bool)),Option::Some(&HashedExpression::ConstantValue(Literal::Boolean(ref right),TypeData::Bool))) => {
+                // convert arguments into new format
+                let left = InlinedExpression::new(stack.get_expr(left).unwrap(), stack, coll);
+                let right = InlinedExpression::new(stack.get_expr(right).unwrap(), stack, coll);
+                match (left, right) {
+                    (InlinedExpression::ConstantBool(l), InlinedExpression::ConstantBool(r)) => {
                         match (out, op) {
                             (TypeData::Bool, Operation::And) => {
-                                Some(InlinedExpression::Constant(Literal::Boolean(left & right)))
-                             },
-                             (TypeData::Bool, Operation::Or) => {
-                                Some(InlinedExpression::Constant(Literal::Boolean(left | right)))
-                             },
-                             anything_else => _unreachable_panic!("illegal operation with boolean values. Should be caught by type checker. {:?}", anything_else)
+                                InlinedExpression::ConstantBool(l & r)
+                            }
+                            (TypeData::Bool, Operation::Or) => {
+                                InlinedExpression::ConstantBool(l | r)
+                            }
+                            _ => panic!("other boolean expressions are not possible"),
                         }
                     }
-                    (Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref left),TypeData::Int)),Option::Some(&HashedExpression::ConstantValue(Literal::Number(ref right),TypeData::Int))) => {
-                        match (out, op) {
-                         (TypeData::Int, Operation::Add) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left + right)))
-                         },
-                         (TypeData::Int, Operation::Sub) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left - right)))
-                         },
-                         (TypeData::Int, Operation::Mul) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left * right)))
-                         },
-                         (TypeData::Int, Operation::Div) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left / right)))
-                         },
-                         (TypeData::Int, Operation::Or) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left | right)))
-                         },
-                         (TypeData::Int, Operation::And) => {
-                             Some(InlinedExpression::Constant(Literal::Number(left & right)))
-                         },
-                         (TypeData::Bool, Operation::Equal) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left == right)))
-                         },
-                         (TypeData::Bool, Operation::GreaterThan) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left > right)))
-                         },
-                         (TypeData::Bool, Operation::LessThan) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left < right)))
-                         },
-                         (TypeData::Bool, Operation::GreaterThanEqual) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left >= right)))
-                         },
-                         (TypeData::Bool, Operation::LessThanEqual) => {
-                             Some(InlinedExpression::Constant(Literal::Boolean(left <= right)))
-                         },
-                         anything_else => _unreachable_panic!("illegal operation with interger constants. Should be caught by type checker. {:?}", anything_else)
+                    (
+                        InlinedExpression::ConstantInt(left),
+                        InlinedExpression::ConstantInt(right),
+                    ) => match (out, op) {
+                        (TypeData::Int, Operation::Add) => {
+                            InlinedExpression::ConstantInt(left + right)
                         }
+                        (TypeData::Int, Operation::Sub) => {
+                            InlinedExpression::ConstantInt(left - right)
+                        }
+                        (TypeData::Int, Operation::Mul) => {
+                            InlinedExpression::ConstantInt(left * right)
+                        }
+                        (TypeData::Int, Operation::Div) => {
+                            InlinedExpression::ConstantInt(left / right)
+                        }
+                        (TypeData::Int, Operation::Or) => {
+                            InlinedExpression::ConstantInt(left | right)
+                        }
+                        (TypeData::Int, Operation::And) => {
+                            InlinedExpression::ConstantInt(left & right)
+                        }
+                        (TypeData::Bool, Operation::Equal) => {
+                            InlinedExpression::ConstantBool(left == right)
+                        }
+                        (TypeData::Bool, Operation::GreaterThan) => {
+                            InlinedExpression::ConstantBool(left > right)
+                        }
+                        (TypeData::Bool, Operation::LessThan) => {
+                            InlinedExpression::ConstantBool(left < right)
+                        }
+                        (TypeData::Bool, Operation::GreaterThanEqual) => {
+                            InlinedExpression::ConstantBool(left >= right)
+                        }
+                        (TypeData::Bool, Operation::LessThanEqual) => {
+                            InlinedExpression::ConstantBool(left <= right)
+                        }
+                        _ => panic!("illegal interger operation"),
                     },
-                    (Option::Some(ref left), Option::Some(ref right)) => {
-                        let left = InlinedExpression::new(left, stack, coll).get_hash();
-                        let right = InlinedExpression::new(right, stack, coll).get_hash();
-                        Some(InlinedExpression::Operation(left, op, right))
-                    },
-                    anything_else => _unreachable_panic!("illegal operation. Should be caught by type checker. {:?}", anything_else)
+                    (left, right) => {
+                        InlinedExpression::Operation(left.get_hash(), op, right.get_hash(), out)
+                    }
+                    anything_else => _unreachable_panic!(
+                        "illegal operation. Should be caught by type checker. {:?}",
+                        anything_else
+                    ),
                 }
             }
         };
-        match &output {
-            &Option::Some(ref out) => {
-                // insert the new expresion into our pool
-                // this ensure the next time we call `InlinedExpression::new`
-                // if our `HashedExpression` was already encountered we won't
-                // do massive amounts of pattern matching, and potentially
-                // deep recursion.
-                coll.insert_hash(&hash, out);
-            }
-            &Option::None => {
-                // debug assertions are just a lazy man's tests right?
-                _unreachable_panic!("no input for {:?}", expr)
-            }
-        };
-        output.unwrap()
+        coll.insert_hash(&output);
+        output
     }
 
     /*
@@ -133,12 +149,13 @@ impl<'a> InlinedExpression<'a> {
         id: &Identifier,
         stack: &mut CallStack<'a, 'b>,
         coll: &mut InlinedCollection<'a>,
-    ) -> Option<InlinedExpression<'a>> {
+    ) -> InlinedExpression<'a> {
         stack
             .get_var(id)
             .into_iter()
             .map(|expr| InlinedExpression::new(expr, stack, coll))
             .next()
+            .unwrap()
     }
 
     #[inline(always)]
@@ -146,14 +163,14 @@ impl<'a> InlinedExpression<'a> {
         arg_index: &usize,
         stack: &mut CallStack<'a, 'b>,
         coll: &mut InlinedCollection<'a>,
-    ) -> Option<InlinedExpression<'a>> {
+    ) -> InlinedExpression<'a> {
         let context = stack.get_context().unwrap();
         let func_expr = stack.get_ctx_expr().unwrap();
         let arg_expr = stack.get_arg_index(*arg_index).unwrap();
         stack.pop();
         let out = InlinedExpression::new(stack.get_expr(&arg_expr).unwrap(), stack, coll);
         stack.push(&context, &func_expr);
-        Some(out)
+        out
     }
 
     #[inline(always)]
@@ -163,7 +180,7 @@ impl<'a> InlinedExpression<'a> {
         hash: &u64,
         stack: &mut CallStack<'a, 'b>,
         coll: &mut InlinedCollection<'a>,
-    ) -> Option<InlinedExpression<'a>> {
+    ) -> InlinedExpression<'a> {
         if stack.is_stdlib(id) {
             let mut new_args = Vec::<u64>::with_capacity(args.len());
             for arg in args.iter() {
@@ -176,14 +193,15 @@ impl<'a> InlinedExpression<'a> {
             }
             let new_args = new_args.into_boxed_slice();
             let name = stack.get_function_name(id).unwrap();
-            Some(InlinedExpression::StdLibFunc(name, new_args))
+            InlinedExpression::StdLibFunc(name, new_args)
         } else {
             stack.push(id, &hash);
             let output = stack
                 .get_return()
                 .into_iter()
                 .map(|expr| InlinedExpression::new(expr, stack, coll))
-                .next();
+                .next()
+                .unwrap();
             stack.pop();
             output
         }
