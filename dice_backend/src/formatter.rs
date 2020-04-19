@@ -1,11 +1,11 @@
-
-use std::io::{stdout,Write,Read};
-use std::fs::{OpenOptions};
 use std::fmt::Display;
+use std::fs::OpenOptions;
+use std::io::{stdout, Read, Write};
 
-use super::parser_output::{AbstractSyntaxTree};
+use super::parser_output::AbstractSyntaxTree;
 
-pub fn formatter(path: &str) -> Result<(),String> {
+pub fn formatter(path: &str) -> Result<(), String> {
+    /*
     let mut input_file = match OpenOptions::new().read(true).open(path) {
         Ok(input_file) => input_file,
         Err(e) => return Err(format!("failed to open file={:?} with error={:?}",path, e))
@@ -21,6 +21,6 @@ pub fn formatter(path: &str) -> Result<(),String> {
         Err(e) => return Err(e),
     };
     println!("{}", tree);
+    */
     Ok(())
 }
-

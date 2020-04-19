@@ -1,24 +1,25 @@
 use super::parser_output::{Literal,Expression,Operation,TypeData,Structures,Statement,Statements,AbstractSyntaxTree};
 
 grammar;
+
 pub Tree: AbstractSyntaxTree<'input> = {
    <full_parse:( Struct )+> => AbstractSyntaxTree::new(full_parse),
 };
-
-pub Stmt: Statement<'input> = {
-  "let" <name: Name> ":" <kind: Kind> "=" <expr: Expr> => Statement::new_var(name, kind, expr),
-   "return" <expr: Expr> => Statement::new_ret(expr),
-};
-
-pub Stmts: Statements<'input> = {
-   <multiple: ( Stmt ";" )*> => Statements::new(multiple),
-}
 
 pub Struct: Structures<'input> = {
    "analyze" <expr: Expr> ";" => Structures::new_analysis(expr),
    "const" <name: Name> ":" <kind: Kind> "=" <expr: Expr> ";" => Structures::new_const(name, kind, expr),
    "fn" <name: Name> "(" <arg: ( Name ":" Kind "," )*> <lastArg: (Name ":" Kind)? > ")" "->" <return_type: Kind> "{" <body:Stmts> "}" => Structures::new_func(name, arg, lastArg, return_type, body),
 };
+
+pub Stmt: Statement<'input> = {
+  "let" <name: Name> ":" <kind: Kind> "=" <expr: Expr> ";" => Statement::new_var(name, kind, expr),
+   "return" <expr: Expr> ";" => Statement::new_ret(expr),
+};
+
+pub Stmts: Statements<'input> = {
+   <multiple: ( Stmt )*> => Statements::new(multiple),
+}
 
 pub Kind: TypeData = {
     "bool" => TypeData::Bool,
@@ -53,6 +54,7 @@ pub Op: Operation = {
     "/" => Operation::Div,
     "|" => Operation::Or,
     "&" => Operation::And,
+    "!=" => Operation::NotEqual,
     "==" => Operation::Equal,
     ">" => Operation::GreaterThan,
     "<" => Operation::LessThan,
