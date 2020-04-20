@@ -72,9 +72,6 @@ impl<'a> BlockExpression<'a> {
                     (TypeData::Int, TypeData::Int) => TypeData::Int,
                     (TypeData::Int, TypeData::CollectionOfInt) => TypeData::CollectionOfInt,
                     (TypeData::CollectionOfInt, TypeData::Int) => TypeData::CollectionOfInt,
-                    (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
-                        TypeData::CollectionOfInt
-                    }
                     (left_type, right_type) => {
                         return Err(format!(
                             "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
@@ -104,9 +101,6 @@ impl<'a> BlockExpression<'a> {
                 (TypeData::Int, TypeData::Int) => TypeData::Bool,
                 (TypeData::Int, TypeData::CollectionOfInt) => TypeData::CollectionOfBool,
                 (TypeData::CollectionOfInt, TypeData::Int) => TypeData::CollectionOfBool,
-                (TypeData::CollectionOfInt, TypeData::CollectionOfInt) => {
-                    TypeData::CollectionOfBool
-                }
                 (left_type, right_type) => {
                     return Err(format!(
                         "Type Error. Expression: ({} {} {}) is illegal. {} cannot {} with {}",
@@ -119,9 +113,6 @@ impl<'a> BlockExpression<'a> {
                     (TypeData::Bool, TypeData::Bool) => TypeData::Bool,
                     (TypeData::Bool, TypeData::CollectionOfBool) => TypeData::CollectionOfBool,
                     (TypeData::CollectionOfBool, TypeData::Bool) => TypeData::CollectionOfBool,
-                    (TypeData::CollectionOfBool, TypeData::CollectionOfBool) => {
-                        TypeData::CollectionOfBool
-                    }
                     // TODO this sucks
                     (left_type, right_type) => {
                         return Err(format!(

@@ -3,6 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
 use super::super::itertools::Itertools;
+use super::super::inliner::{Op,IntArg,BoolArg,BoolOrInt};
 use super::super::smallvec::SmallVec;
 
 use super::super::seahasher::DefaultSeaHasher;
@@ -110,6 +111,15 @@ impl LambdaKind {
             }
         }
     }
+}
+
+pub fn from_op(arg: Op) -> Combinator {
+    match op {
+        
+    }
+    new_combin(move | i1: Iter, i2: Iter| -> Iter {
+       
+    })
 }
 
 /// build a constant boolean
