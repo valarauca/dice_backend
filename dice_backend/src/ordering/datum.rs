@@ -1,3 +1,4 @@
+use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use super::super::parser_output::TypeData;
@@ -17,12 +18,31 @@ pub type BoolVec = SmallVec<[bool; 12]>;
 #[cfg(target_pointer_width = "16")]
 pub type BoolVec = SmallVec<[bool; 6]>;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Datum {
     Bool(bool),
     Int(i32),
     CollectionOfInt(IntVec),
     CollectionOfBool(BoolVec),
+}
+impl fmt::Debug for Datum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            &Datum::Bool(ref b) => write!(f, "{}", *b),
+            &Datum::Int(ref i) => write!(f, "{}", *i),
+            &Datum::CollectionOfInt(ref i) => {
+                f.debug_list().entries(i.clone().into_iter()).finish()
+            }
+            &Datum::CollectionOfBool(ref b) => {
+                f.debug_list().entries(b.clone().into_iter()).finish()
+            }
+        }
+    }
+}
+impl fmt::Display for Datum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <Datum as fmt::Debug>::fmt(self, f)
+    }
 }
 impl Hash for Datum {
     // implement Hash myself because I saw a spooky collision yesterday

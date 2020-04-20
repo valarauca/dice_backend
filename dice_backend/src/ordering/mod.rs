@@ -6,13 +6,72 @@ mod element;
 pub use self::element::{Element, Rational};
 mod lambda;
 pub use self::lambda::{
-    coalesce, const_bool, const_int, count, d3, d6, filter, from_op, join, len, sum, Chain,
-    Coalesce, CoalesceChain, CoalesceCombinator, Combinator, Init, Iter, LambdaKind,
+    coalesce, const_bool, const_int, count, d3, d6, filter, from_op, join, len, max, min, sum,
+    Chain, Coalesce, CoalesceChain, CoalesceCombinator, Combinator, Init, Iter, LambdaKind,
 };
 mod report;
 pub use self::report::Report;
 mod coll;
 pub use self::coll::build_report;
+
+/// create report directly converts source code into a report.
+pub fn create_report(source: &str) -> Result<Report, String> {
+    use super::cfgbuilder::ExpressionCollection;
+    use super::inliner::InlinedCollection;
+    use super::namespace::Namespace;
+    use super::parser_output::AbstractSyntaxTree;
+
+    let ast = AbstractSyntaxTree::parse(source)?;
+    let namespace = Namespace::new(&ast)?;
+    let cfgcoll = ExpressionCollection::new(&namespace);
+    let inlinecoll = InlinedCollection::new(&cfgcoll);
+    Ok(build_report(&inlinecoll))
+}
+
+#[test]
+fn test_removing_min_dice_roll() {
+    let dut = r#"
+const dice: vec<int> = roll_d6(3);
+analyze (sum(dice) - min(dice));
+"#;
+    let report = create_report(dut).unwrap();
+    let output = report.equal(&[
+        (Datum::from(2), Rational::new(1, 216)),
+        (Datum::from(3), Rational::new(3, 216)),
+        (Datum::from(4), Rational::new(7, 216)),
+        (Datum::from(5), Rational::new(12, 216)),
+        (Datum::from(6), Rational::new(18, 216)),
+        (Datum::from(7), Rational::new(27, 216)),
+        (Datum::from(8), Rational::new(34, 216)),
+        (Datum::from(9), Rational::new(36, 216)),
+        (Datum::from(10), Rational::new(34, 216)),
+        (Datum::from(11), Rational::new(27, 216)),
+        (Datum::from(12), Rational::new(16, 216)),
+    ]);
+}
+
+#[test]
+fn test_removing_max_dice_roll() {
+    let dut = r#"
+const dice: vec<int> = roll_d6(3);
+analyze (sum(dice) - max(dice));
+"#;
+
+    let report = create_report(dut).unwrap();
+    let output = report.equal(&[
+        (Datum::from(2), Rational::new(16, 216)),
+        (Datum::from(3), Rational::new(27, 216)),
+        (Datum::from(4), Rational::new(34, 216)),
+        (Datum::from(5), Rational::new(36, 216)),
+        (Datum::from(6), Rational::new(34, 216)),
+        (Datum::from(7), Rational::new(27, 216)),
+        (Datum::from(8), Rational::new(16, 216)),
+        (Datum::from(9), Rational::new(12, 216)),
+        (Datum::from(10), Rational::new(7, 216)),
+        (Datum::from(11), Rational::new(3, 216)),
+        (Datum::from(12), Rational::new(1, 216)),
+    ]);
+}
 
 #[test]
 fn test_1d6() {

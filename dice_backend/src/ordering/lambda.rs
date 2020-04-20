@@ -433,6 +433,38 @@ pub fn const_int(x: i32) -> Init {
     })
 }
 
+/// standard library max
+pub fn max() -> Chain {
+    new_chain(move |iter: Iter| -> Iter {
+        new_iter(iter.filter_map(|e| -> Option<Element> {
+            let (datum, prob) = e.split();
+            let mut dice_coll = datum.get_int_vec();
+            dice_coll.sort_unstable();
+            if dice_coll.len() >= 1 {
+                let max = dice_coll.pop().unwrap();
+                Some(Element::new(max, prob))
+            } else {
+                None
+            }
+        }))
+    })
+}
+
+/// standard library min
+pub fn min() -> Chain {
+    new_chain(move |iter: Iter| -> Iter {
+        new_iter(iter.filter_map(|e| -> Option<Element> {
+            let (datum, prob) = e.split();
+            let mut dice_coll = datum.get_int_vec();
+            dice_coll.sort_unstable();
+            if dice_coll.len() >= 1 {
+                Some(Element::new(dice_coll[0], prob))
+            } else {
+                None
+            }
+        }))
+    })
+}
 /// standard library length operator
 pub fn len() -> Chain {
     new_chain(move |iter: Iter| -> Iter {

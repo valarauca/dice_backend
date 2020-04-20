@@ -85,6 +85,32 @@ impl<'a> Namespace<'a> {
 
     fn populate_std(&mut self) {
         self.functions.insert(
+            "min",
+            FunctionDeclaration {
+                stdlib: true,
+                name: "min",
+                args: vec![("minimum_of_dice_collection", TypeData::CollectionOfInt)]
+                    .into_boxed_slice(),
+                ret: TypeData::Int,
+                body: Statements {
+                    data: vec![].into_boxed_slice(),
+                },
+            },
+        );
+        self.functions.insert(
+            "max",
+            FunctionDeclaration {
+                stdlib: true,
+                name: "max",
+                args: vec![("maximum_of_dice_collection", TypeData::CollectionOfInt)]
+                    .into_boxed_slice(),
+                ret: TypeData::Int,
+                body: Statements {
+                    data: vec![].into_boxed_slice(),
+                },
+            },
+        );
+        self.functions.insert(
             "roll_d6",
             FunctionDeclaration {
                 stdlib: true,

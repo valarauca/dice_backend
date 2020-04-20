@@ -109,7 +109,16 @@ fn builder_recursive<'a>(
             stack.push(arg_iter1);
             resolve.resolve(&expr, stack)
         }
-        _ => panic!(),
+        &InlinedExpression::Max(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
+            stack.push(arg_iter);
+            resolve.resolve(&expr, stack)
+        }
+        &InlinedExpression::Min(ref arg) => {
+            let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
+            stack.push(arg_iter);
+            resolve.resolve(&expr, stack)
+        }
     }
 }
 
@@ -125,6 +134,14 @@ fn lambda_builder_recursive<'a>(
         return;
     }
     match expr {
+        &InlinedExpression::Max(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
+            resolve.insert(expr, LambdaKind::Chain(max()));
+        }
+        &InlinedExpression::Min(ref arg) => {
+            lambda_builder_recursive(resolve, coll, coll.get_expr(arg).unwrap());
+            resolve.insert(expr, LambdaKind::Chain(min()));
+        }
         &InlinedExpression::ConstantBool(ref b) => {
             resolve.insert(expr, LambdaKind::Init(const_bool(b.clone())))
         }

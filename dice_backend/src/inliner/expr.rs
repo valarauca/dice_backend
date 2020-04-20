@@ -106,9 +106,22 @@ pub enum InlinedExpression {
 
     /// standard library function count
     Count(u64),
+
+    /// length of a collection
     Len(u64),
+
+    /// join 2 collections
     Join(u64, u64),
+
+    /// sum the items in a collection
     Sum(u64),
+
+    /// return the maximum in a collection
+    Max(u64),
+
+    /// return the minimum in a collection
+    Min(u64),
+
     ConstantInt(i32),
     ConstantBool(bool),
     Op(Op),
@@ -291,6 +304,22 @@ impl<'a> InlinedExpression {
     ) -> InlinedExpression {
         if stack.is_stdlib(id) {
             match stack.get_function_name(id).unwrap() {
+                "max" => {
+                    debug_assert_eq!(*kind, TypeData::Int);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::CollectionOfInt);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::Max(arg.get_hash())
+                }
+                "min" => {
+                    debug_assert_eq!(*kind, TypeData::Int);
+                    debug_assert_eq!(args.len(), 1);
+                    let expr = stack.get_expr(&args[0]).unwrap();
+                    debug_assert_eq!(expr.get_type(), TypeData::CollectionOfInt);
+                    let arg = InlinedExpression::new(expr, stack, coll);
+                    InlinedExpression::Min(arg.get_hash())
+                }
                 "roll_d6" => {
                     debug_assert_eq!(*kind, TypeData::CollectionOfInt);
                     debug_assert_eq!(args.len(), 1);

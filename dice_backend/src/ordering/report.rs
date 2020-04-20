@@ -38,6 +38,36 @@ impl Report {
         }
         Ok(())
     }
+
+    /// converts the report
+    fn into_raw_report(&self) -> Vec<(Datum, f64)> {
+        let make_floats = |(datum, rational): (&Datum, &Rational)| -> (Datum, f64) {
+            let num = rational.numer().clone() as f64;
+            let denom = rational.denom().clone() as f64;
+            (datum.clone(), num / denom)
+        };
+        let mut vec: Vec<(Datum, f64)> = self.data.iter().map(make_floats).collect();
+        vec.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
+        vec
+    }
+
+    pub fn serialize_report<I: Into<Option<usize>>>(&self, decimal: I) -> String {
+        use std::fmt::Write;
+
+        let decimal = decimal.into().into_iter().next().unwrap_or_else(|| 12usize);
+        let mut s = String::with_capacity(4096);
+        for (datum, prob) in self.into_raw_report() {
+            write!(
+                &mut s,
+                " {datum}: {prob:.decimal$}\n",
+                datum = datum,
+                prob = prob,
+                decimal = decimal
+            )
+            .unwrap();
+        }
+        s
+    }
 }
 
 impl FromIterator<Element> for Report {
