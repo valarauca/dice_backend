@@ -1,7 +1,7 @@
 mod coll;
 pub use self::coll::InlinedCollection;
 mod expr;
-pub use self::expr::{InlinedExpression,Op,BoolOrInt,IntArg,BoolArg};
+pub use self::expr::{BoolArg, BoolOrInt, InlinedExpression, IntArg, Op};
 
 #[test]
 fn test_trivial_program() {

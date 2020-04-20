@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
+use super::super::inliner::{BoolArg, BoolOrInt, IntArg, Op};
 use super::super::itertools::Itertools;
-use super::super::inliner::{Op,IntArg,BoolArg,BoolOrInt};
 use super::super::smallvec::SmallVec;
 
 use super::super::seahasher::DefaultSeaHasher;
@@ -113,13 +113,308 @@ impl LambdaKind {
     }
 }
 
-pub fn from_op(arg: Op) -> Combinator {
-    match op {
-        
+pub fn from_op(arg: &Op) -> Combinator {
+    #[inline(always)]
+    fn int_scalar<T, F>(lambda: F) -> impl 'static + Fn((Element, Element)) -> Element
+    where
+        F: Fn(i32, i32) -> T + 'static,
+        Datum: From<T>,
+    {
+        move |(i1, i2): (Element, Element)| -> Element {
+            let (data_1, prob_1) = i1.split();
+            let (data_2, prob_2) = i2.split();
+            Element::new(lambda(data_1.get_int(), data_2.get_int()), prob_1 * prob_2)
+        }
     }
-    new_combin(move | i1: Iter, i2: Iter| -> Iter {
-       
-    })
+
+    #[inline(always)]
+    fn int_coll_scalar<F>(lambda: F) -> impl Fn((Element, Element)) -> Element
+    where
+        F: Fn(&mut i32, i32),
+    {
+        move |(collection, item): (Element, Element)| -> Element {
+            let (collection_data, collection_prob) = collection.split();
+            let (scalar_data, scalar_prob) = item.split();
+            let scalar_int = scalar_data.get_int();
+            let mut coll_vec = collection_data.get_int_vec();
+            for ptr in coll_vec.as_mut_slice().iter_mut() {
+                lambda(ptr, scalar_int);
+            }
+            Element::new(coll_vec, scalar_prob * collection_prob)
+        }
+    }
+
+    /// collection is always first arg, scalar is second
+    #[inline(always)]
+    fn int_coll_bool<F>(lambda: F) -> impl Fn((Element, Element)) -> Element
+    where
+        F: Fn(i32, i32) -> bool,
+    {
+        move |(collection, item): (Element, Element)| -> Element {
+            let (collection_data, collection_prob) = collection.split();
+            let (scalar_data, scalar_prob) = item.split();
+            let scalar_int = scalar_data.get_int();
+            Element::new(
+                collection_data
+                    .get_int_vec()
+                    .into_iter()
+                    .map(|x| lambda(x, scalar_int))
+                    .collect::<BoolVec>(),
+                scalar_prob * collection_prob,
+            )
+        }
+    }
+
+    match arg {
+        Op::Add(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
+            new_iter(
+                i1.cartesian_product(small_vec_builder(i2))
+                    .map(int_scalar(|a, b| a + b)),
+            )
+        }),
+        Op::Add(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_scalar(|a, b| *a += b)),
+                )
+            })
+        }
+        Op::Add(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_scalar(|a, b| *a += b)),
+                )
+            })
+        }
+        Op::Sub(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
+            new_iter(
+                i1.cartesian_product(small_vec_builder(i2))
+                    .map(int_scalar(|a, b| a - b)),
+            )
+        }),
+        Op::Sub(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_scalar(|a, b| *a -= b)),
+                )
+            })
+        }
+        Op::Sub(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_scalar(|a, b| *a -= b)),
+                )
+            })
+        }
+        Op::Mul(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
+            new_iter(
+                i1.cartesian_product(small_vec_builder(i2))
+                    .map(int_scalar(|a, b| a * b)),
+            )
+        }),
+        Op::Mul(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_scalar(|a, b| *a *= b)),
+                )
+            })
+        }
+        Op::Mul(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_scalar(|a, b| *a *= b)),
+                )
+            })
+        }
+        Op::Div(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
+            new_iter(
+                i1.cartesian_product(small_vec_builder(i2))
+                    .map(int_scalar(|a, b| a / b)),
+            )
+        }),
+        Op::Div(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_scalar(|a, b| *a /= b)),
+                )
+            })
+        }
+        Op::Div(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_scalar(|a, b| *a /= b)),
+                )
+            })
+        }
+        Op::GreaterThan(IntArg::Int_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_scalar(|a, b| a > b)),
+                )
+            })
+        }
+        Op::GreaterThan(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_bool(|coll, scal| scal > coll)),
+                )
+            })
+        }
+        Op::GreaterThan(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_bool(|coll, scal| coll > scal)),
+                )
+            })
+        }
+        Op::GreaterThanEqual(IntArg::Int_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_scalar(|a, b| a >= b)),
+                )
+            })
+        }
+        Op::GreaterThanEqual(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_bool(|coll, scal| scal >= coll)),
+                )
+            })
+        }
+        Op::GreaterThanEqual(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_bool(|coll, scal| coll >= scal)),
+                )
+            })
+        }
+        Op::LessThan(IntArg::Int_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_scalar(|a, b| a < b)),
+                )
+            })
+        }
+        Op::LessThan(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_bool(|coll, scal| scal < coll)),
+                )
+            })
+        }
+        Op::LessThan(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_bool(|coll, scal| coll < scal)),
+                )
+            })
+        }
+        Op::LessThanEqual(IntArg::Int_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_scalar(|a, b| a <= b)),
+                )
+            })
+        }
+        Op::LessThanEqual(IntArg::Int_CollectionOfInt(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_bool(|coll, scal| scal <= coll)),
+                )
+            })
+        }
+        Op::LessThanEqual(IntArg::CollectionOfInt_Int(left, right)) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_bool(|coll, scal| scal <= coll)),
+                )
+            })
+        }
+        Op::Equal(BoolOrInt::Int(IntArg::Int_Int(left, right))) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_scalar(|a, b| a == b)),
+                )
+            })
+        }
+        Op::Equal(BoolOrInt::Int(IntArg::Int_CollectionOfInt(left, right))) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_bool(|coll, scal| scal == coll)),
+                )
+            })
+        }
+        Op::Equal(BoolOrInt::Int(IntArg::CollectionOfInt_Int(left, right))) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_bool(|coll, scal| scal == coll)),
+                )
+            })
+        }
+        Op::Equal(BoolOrInt::Bool(BoolArg::Bool_Bool(left, right))) => unreachable!(),
+        Op::Equal(BoolOrInt::Bool(BoolArg::Bool_CollectionOfBool(left, right))) => unreachable!(),
+        Op::Equal(BoolOrInt::Bool(BoolArg::CollectionOfBool_Bool(left, right))) => unreachable!(),
+        Op::NotEqual(BoolOrInt::Int(IntArg::Int_Int(left, right))) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_scalar(|a, b| a != b)),
+                )
+            })
+        }
+        Op::NotEqual(BoolOrInt::Int(IntArg::Int_CollectionOfInt(left, right))) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i2.cartesian_product(small_vec_builder(i1))
+                        .map(int_coll_bool(|coll, scal| scal != coll)),
+                )
+            })
+        }
+        Op::NotEqual(BoolOrInt::Int(IntArg::CollectionOfInt_Int(left, right))) => {
+            new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                new_iter(
+                    i1.cartesian_product(small_vec_builder(i2))
+                        .map(int_coll_bool(|coll, scal| scal != coll)),
+                )
+            })
+        }
+        Op::NotEqual(BoolOrInt::Bool(BoolArg::Bool_Bool(left, right))) => unreachable!(),
+        Op::NotEqual(BoolOrInt::Bool(BoolArg::Bool_CollectionOfBool(left, right))) => {
+            unreachable!()
+        }
+        Op::NotEqual(BoolOrInt::Bool(BoolArg::CollectionOfBool_Bool(left, right))) => {
+            unreachable!()
+        }
+        Op::And(BoolArg::Bool_Bool(left, right)) => unreachable!(),
+        Op::And(BoolArg::CollectionOfBool_Bool(left, right)) => unreachable!(),
+        Op::And(BoolArg::Bool_CollectionOfBool(left, right)) => unreachable!(),
+        Op::Or(BoolArg::Bool_Bool(left, right)) => unreachable!(),
+        Op::Or(BoolArg::CollectionOfBool_Bool(left, right)) => unreachable!(),
+        Op::Or(BoolArg::Bool_CollectionOfBool(left, right)) => unreachable!(),
+    }
 }
 
 /// build a constant boolean
@@ -409,4 +704,10 @@ where
     F: Fn(Iter) -> Init + 'static,
 {
     Box::new(arg)
+}
+
+fn small_vec_builder(arg: Iter) -> SmallVec<[Element; 1]> {
+    let mut v = SmallVec::new();
+    v.extend(arg);
+    v
 }

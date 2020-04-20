@@ -6,8 +6,8 @@ mod element;
 pub use self::element::{Element, Rational};
 mod lambda;
 pub use self::lambda::{
-    coalesce, const_bool, const_int, count, d3, d6, filter, join, len, sum, Chain, Coalesce,
-    CoalesceChain, CoalesceCombinator, Combinator, Init, Iter, LambdaKind,
+    coalesce, const_bool, const_int, count, d3, d6, filter, from_op, join, len, sum, Chain,
+    Coalesce, CoalesceChain, CoalesceCombinator, Combinator, Init, Iter, LambdaKind,
 };
 mod report;
 pub use self::report::Report;

@@ -59,8 +59,17 @@ fn builder_recursive<'a>(
     stack: &mut Vec<Iter>,
 ) -> Iter {
     match expr {
-        &InlinedExpression::ConstantBool(_) => resolve.resolve(&expr, stack),
-        &InlinedExpression::ConstantInt(ref i) => resolve.resolve(&expr, stack),
+        &InlinedExpression::ConstantBool(_) | &InlinedExpression::ConstantInt(_) => {
+            resolve.resolve(&expr, stack)
+        }
+        &InlinedExpression::Op(ref op) => {
+            let (left, right) = op.get_args();
+            let arg_left = builder_recursive(resolve, coll, coll.get_expr(&left).unwrap(), stack);
+            let arg_right = builder_recursive(resolve, coll, coll.get_expr(&right).unwrap(), stack);
+            stack.push(arg_right);
+            stack.push(arg_left);
+            resolve.resolve(&expr, stack)
+        }
         &InlinedExpression::D6(ref arg) => {
             let arg_iter = builder_recursive(resolve, coll, coll.get_expr(arg).unwrap(), stack);
             stack.push(arg_iter);
@@ -152,6 +161,11 @@ fn lambda_builder_recursive<'a>(
             lambda_builder_recursive(resolve, coll, coll.get_expr(b).unwrap());
             resolve.insert(expr, LambdaKind::Combinator(filter()));
         }
-        _ => panic!()
+        &InlinedExpression::Op(ref op) => {
+            let (left, right) = op.get_args();
+            lambda_builder_recursive(resolve, coll, coll.get_expr(&left).unwrap());
+            lambda_builder_recursive(resolve, coll, coll.get_expr(&right).unwrap());
+            resolve.insert(expr, LambdaKind::Combinator(from_op(op)));
+        }
     }
 }

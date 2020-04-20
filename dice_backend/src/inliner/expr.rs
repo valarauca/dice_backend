@@ -1,6 +1,4 @@
-
 #[allow(non_camel_case_types)]
-
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
@@ -10,7 +8,7 @@ use super::super::seahash::SeaHasher;
 
 use super::coll::InlinedCollection;
 
-#[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord,Hash,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum Op {
     Add(IntArg),
     Sub(IntArg),
@@ -23,33 +21,80 @@ pub enum Op {
     LessThan(IntArg),
     LessThanEqual(IntArg),
     Or(BoolArg),
-    And(BoolArg), 
+    And(BoolArg),
+}
+impl Op {
+    #[inline(always)]
+    pub fn get_args(&self) -> (u64, u64) {
+        match self {
+            &Op::Add(ref a) => a.get_args(),
+            &Op::Sub(ref a) => a.get_args(),
+            &Op::Mul(ref a) => a.get_args(),
+            &Op::Div(ref a) => a.get_args(),
+            &Op::Equal(ref a) => a.get_args(),
+            &Op::NotEqual(ref a) => a.get_args(),
+            &Op::GreaterThan(ref a) => a.get_args(),
+            &Op::GreaterThanEqual(ref a) => a.get_args(),
+            &Op::LessThan(ref a) => a.get_args(),
+            &Op::LessThanEqual(ref a) => a.get_args(),
+            &Op::Or(ref a) => a.get_args(),
+            &Op::And(ref a) => a.get_args(),
+        }
+    }
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord,Hash,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum BoolOrInt {
     Bool(BoolArg),
     Int(IntArg),
 }
-
-#[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord,Hash,Debug)]
-pub enum IntArg {
-    Int_Int(u64,u64),
-    Int_CollectionOfInt(u64,u64),
-    CollectionOfInt_Int(u64,u64),
+impl BoolOrInt {
+    #[inline(always)]
+    pub fn get_args(&self) -> (u64, u64) {
+        match self {
+            Self::Bool(ref b) => b.get_args(),
+            Self::Int(ref x) => x.get_args(),
+        }
+    }
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord,Hash,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum IntArg {
+    Int_Int(u64, u64),
+    Int_CollectionOfInt(u64, u64),
+    CollectionOfInt_Int(u64, u64),
+}
+impl IntArg {
+    #[inline(always)]
+    pub fn get_args(&self) -> (u64, u64) {
+        match self {
+            Self::Int_Int(ref a, ref b) => (*a, *b),
+            Self::Int_CollectionOfInt(ref a, ref b) => (*a, *b),
+            Self::CollectionOfInt_Int(ref a, ref b) => (*a, *b),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum BoolArg {
-    Bool_Bool(u64,u64),
-    Bool_CollectionOfBool(u64,u64),
-    CollectionOfBool_Bool(u64,u64),
+    Bool_Bool(u64, u64),
+    Bool_CollectionOfBool(u64, u64),
+    CollectionOfBool_Bool(u64, u64),
+}
+impl BoolArg {
+    #[inline(always)]
+    pub fn get_args(&self) -> (u64, u64) {
+        match self {
+            Self::Bool_Bool(ref a, ref b) => (*a, *b),
+            Self::Bool_CollectionOfBool(ref a, ref b) => (*a, *b),
+            Self::CollectionOfBool_Bool(ref a, ref b) => (*a, *b),
+        }
+    }
 }
 
 /// Inlined Expression contains the very base values
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InlinedExpression {
-
     /// standard library function roll_d6
     D6(u64),
 
@@ -125,8 +170,10 @@ impl<'a> InlinedExpression {
             }
             &HashedExpression::Op(ref left_hashed, op, ref right_hashed, out) => {
                 // convert arguments into new format
-                let left = InlinedExpression::new(stack.get_expr(left_hashed).unwrap(), stack, coll);
-                let right = InlinedExpression::new(stack.get_expr(right_hashed).unwrap(), stack, coll);
+                let left =
+                    InlinedExpression::new(stack.get_expr(left_hashed).unwrap(), stack, coll);
+                let right =
+                    InlinedExpression::new(stack.get_expr(right_hashed).unwrap(), stack, coll);
                 match (left, right) {
                     (InlinedExpression::ConstantBool(l), InlinedExpression::ConstantBool(r)) => {
                         match (out, op) {
@@ -182,9 +229,15 @@ impl<'a> InlinedExpression {
                         _ => panic!("illegal interger operation"),
                     },
                     (left, right) => {
-			let left_kind = stack.get_expr(left_hashed).unwrap().get_type();
-			let right_kind = stack.get_expr(right_hashed).unwrap().get_type();
-                        InlinedExpression::build_inline_op(left_kind, left.get_hash(), op, right_kind, right.get_hash())
+                        let left_kind = stack.get_expr(left_hashed).unwrap().get_type();
+                        let right_kind = stack.get_expr(right_hashed).unwrap().get_type();
+                        InlinedExpression::build_inline_op(
+                            left_kind,
+                            left.get_hash(),
+                            op,
+                            right_kind,
+                            right.get_hash(),
+                        )
                     }
                 }
             }
@@ -325,7 +378,6 @@ impl<'a> InlinedExpression {
         }
     }
 
-
     /// called after inlining is resolved
     /// this handles building the final expression
     #[inline(always)]
@@ -335,138 +387,170 @@ impl<'a> InlinedExpression {
         op: Operation,
         right_kind: TypeData,
         right_hash: u64,
-     ) -> InlinedExpression {
+    ) -> InlinedExpression {
         match (op, left_kind, right_kind) {
-		(Operation::Add, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::Add(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::Add, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::Add(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::Add, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::Add(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::Sub, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::Sub(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::Sub, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::Sub(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::Sub, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::Sub(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::Mul, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::Mul(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::Mul, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::Mul(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::Mul, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::Mul(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::Div, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::Div(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::Div, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::Div(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::Div, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::Div(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::GreaterThan, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::GreaterThan(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::GreaterThan, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::GreaterThan(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::GreaterThan, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::GreaterThan(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::LessThan, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::LessThan(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::LessThan, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::LessThan(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::LessThan, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::LessThan(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::LessThanEqual, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::LessThanEqual(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::LessThanEqual, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::LessThanEqual(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::LessThanEqual, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::LessThanEqual(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::GreaterThanEqual, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::GreaterThanEqual(IntArg::Int_Int(left_hash, right_hash)))
-		}
-		(Operation::GreaterThanEqual, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::GreaterThanEqual(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
-		}
-		(Operation::GreaterThanEqual, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::GreaterThanEqual(IntArg::CollectionOfInt_Int(left_hash,right_hash)))
-		}
-		(Operation::Or, TypeData::Bool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::Or(BoolArg::Bool_Bool(left_hash,right_hash)))
-		}
-		(Operation::Or, TypeData::CollectionOfBool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::Or(BoolArg::CollectionOfBool_Bool(left_hash,right_hash)))
-		}
-		(Operation::Or, TypeData::Bool, TypeData::CollectionOfBool) => {
-			InlinedExpression::Op(Op::Or(BoolArg::Bool_CollectionOfBool(left_hash,right_hash)))
-		}
-		(Operation::And, TypeData::Bool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::And(BoolArg::Bool_Bool(left_hash,right_hash)))
-		}
-		(Operation::And, TypeData::CollectionOfBool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::And(BoolArg::CollectionOfBool_Bool(left_hash,right_hash)))
-		}
-		(Operation::And, TypeData::Bool, TypeData::CollectionOfBool) => {
-			InlinedExpression::Op(Op::And(BoolArg::Bool_CollectionOfBool(left_hash,right_hash)))
-		}
-		(Operation::Equal, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::Equal(BoolOrInt::Int(IntArg::Int_Int(left_hash, right_hash))))
-		}
-		(Operation::Equal, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::Equal(BoolOrInt::Int(IntArg::Int_CollectionOfInt(left_hash, right_hash))))
-		}
-		(Operation::Equal, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::Equal(BoolOrInt::Int(IntArg::CollectionOfInt_Int(left_hash,right_hash))))
-		}
-		(Operation::Equal, TypeData::Bool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::Equal(BoolOrInt::Bool(BoolArg::Bool_Bool(left_hash,right_hash))))
-		}
-		(Operation::Equal, TypeData::CollectionOfBool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::Equal(BoolOrInt::Bool(BoolArg::CollectionOfBool_Bool(left_hash,right_hash))))
-		}
-		(Operation::Equal, TypeData::Bool, TypeData::CollectionOfBool) => {
-			InlinedExpression::Op(Op::Equal(BoolOrInt::Bool(BoolArg::Bool_CollectionOfBool(left_hash,right_hash))))
-		}
-		(Operation::NotEqual, TypeData::Int, TypeData::Int) => {
-			InlinedExpression::Op(Op::NotEqual(BoolOrInt::Int(IntArg::Int_Int(left_hash, right_hash))))
-		}
-		(Operation::NotEqual, TypeData::Int, TypeData::CollectionOfInt) => {
-			InlinedExpression::Op(Op::NotEqual(BoolOrInt::Int(IntArg::Int_CollectionOfInt(left_hash, right_hash))))
-		}
-		(Operation::NotEqual, TypeData::CollectionOfInt, TypeData::Int) => {
-			InlinedExpression::Op(Op::NotEqual(BoolOrInt::Int(IntArg::CollectionOfInt_Int(left_hash,right_hash))))
-		}
-		(Operation::NotEqual, TypeData::Bool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::NotEqual(BoolOrInt::Bool(BoolArg::Bool_Bool(left_hash,right_hash))))
-		}
-		(Operation::NotEqual, TypeData::CollectionOfBool, TypeData::Bool) => {
-			InlinedExpression::Op(Op::NotEqual(BoolOrInt::Bool(BoolArg::CollectionOfBool_Bool(left_hash,right_hash))))
-		}
-		(Operation::NotEqual, TypeData::Bool, TypeData::CollectionOfBool) => {
-			InlinedExpression::Op(Op::NotEqual(BoolOrInt::Bool(BoolArg::Bool_CollectionOfBool(left_hash,right_hash))))
-		},
-		_ => {
-			// these should all be illegal & caught within `namespace` package
-			_unreachable_panic!()
-		}
-	}
-     }
+            (Operation::Add, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::Add(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::Add, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::Add(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
+            }
+            (Operation::Add, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::Add(IntArg::CollectionOfInt_Int(left_hash, right_hash)))
+            }
+            (Operation::Sub, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::Sub(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::Sub, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::Sub(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
+            }
+            (Operation::Sub, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::Sub(IntArg::CollectionOfInt_Int(left_hash, right_hash)))
+            }
+            (Operation::Mul, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::Mul(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::Mul, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::Mul(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
+            }
+            (Operation::Mul, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::Mul(IntArg::CollectionOfInt_Int(left_hash, right_hash)))
+            }
+            (Operation::Div, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::Div(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::Div, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::Div(IntArg::Int_CollectionOfInt(left_hash, right_hash)))
+            }
+            (Operation::Div, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::Div(IntArg::CollectionOfInt_Int(left_hash, right_hash)))
+            }
+            (Operation::GreaterThan, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::GreaterThan(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::GreaterThan, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::GreaterThan(IntArg::Int_CollectionOfInt(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::GreaterThan, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::GreaterThan(IntArg::CollectionOfInt_Int(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::LessThan, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::LessThan(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::LessThan, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::LessThan(IntArg::Int_CollectionOfInt(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::LessThan, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::LessThan(IntArg::CollectionOfInt_Int(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::LessThanEqual, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::LessThanEqual(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::LessThanEqual, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::LessThanEqual(IntArg::Int_CollectionOfInt(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::LessThanEqual, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::LessThanEqual(IntArg::CollectionOfInt_Int(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::GreaterThanEqual, TypeData::Int, TypeData::Int) => {
+                InlinedExpression::Op(Op::GreaterThanEqual(IntArg::Int_Int(left_hash, right_hash)))
+            }
+            (Operation::GreaterThanEqual, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::GreaterThanEqual(IntArg::Int_CollectionOfInt(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::GreaterThanEqual, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::GreaterThanEqual(IntArg::CollectionOfInt_Int(
+                    left_hash, right_hash,
+                )))
+            }
+            (Operation::Or, TypeData::Bool, TypeData::Bool) => {
+                InlinedExpression::Op(Op::Or(BoolArg::Bool_Bool(left_hash, right_hash)))
+            }
+            (Operation::Or, TypeData::CollectionOfBool, TypeData::Bool) => InlinedExpression::Op(
+                Op::Or(BoolArg::CollectionOfBool_Bool(left_hash, right_hash)),
+            ),
+            (Operation::Or, TypeData::Bool, TypeData::CollectionOfBool) => InlinedExpression::Op(
+                Op::Or(BoolArg::Bool_CollectionOfBool(left_hash, right_hash)),
+            ),
+            (Operation::And, TypeData::Bool, TypeData::Bool) => {
+                InlinedExpression::Op(Op::And(BoolArg::Bool_Bool(left_hash, right_hash)))
+            }
+            (Operation::And, TypeData::CollectionOfBool, TypeData::Bool) => InlinedExpression::Op(
+                Op::And(BoolArg::CollectionOfBool_Bool(left_hash, right_hash)),
+            ),
+            (Operation::And, TypeData::Bool, TypeData::CollectionOfBool) => InlinedExpression::Op(
+                Op::And(BoolArg::Bool_CollectionOfBool(left_hash, right_hash)),
+            ),
+            (Operation::Equal, TypeData::Int, TypeData::Int) => InlinedExpression::Op(Op::Equal(
+                BoolOrInt::Int(IntArg::Int_Int(left_hash, right_hash)),
+            )),
+            (Operation::Equal, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::Equal(BoolOrInt::Int(IntArg::Int_CollectionOfInt(
+                    left_hash, right_hash,
+                ))))
+            }
+            (Operation::Equal, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::Equal(BoolOrInt::Int(IntArg::CollectionOfInt_Int(
+                    left_hash, right_hash,
+                ))))
+            }
+            (Operation::Equal, TypeData::Bool, TypeData::Bool) => InlinedExpression::Op(Op::Equal(
+                BoolOrInt::Bool(BoolArg::Bool_Bool(left_hash, right_hash)),
+            )),
+            (Operation::Equal, TypeData::CollectionOfBool, TypeData::Bool) => {
+                InlinedExpression::Op(Op::Equal(BoolOrInt::Bool(BoolArg::CollectionOfBool_Bool(
+                    left_hash, right_hash,
+                ))))
+            }
+            (Operation::Equal, TypeData::Bool, TypeData::CollectionOfBool) => {
+                InlinedExpression::Op(Op::Equal(BoolOrInt::Bool(BoolArg::Bool_CollectionOfBool(
+                    left_hash, right_hash,
+                ))))
+            }
+            (Operation::NotEqual, TypeData::Int, TypeData::Int) => InlinedExpression::Op(
+                Op::NotEqual(BoolOrInt::Int(IntArg::Int_Int(left_hash, right_hash))),
+            ),
+            (Operation::NotEqual, TypeData::Int, TypeData::CollectionOfInt) => {
+                InlinedExpression::Op(Op::NotEqual(BoolOrInt::Int(IntArg::Int_CollectionOfInt(
+                    left_hash, right_hash,
+                ))))
+            }
+            (Operation::NotEqual, TypeData::CollectionOfInt, TypeData::Int) => {
+                InlinedExpression::Op(Op::NotEqual(BoolOrInt::Int(IntArg::CollectionOfInt_Int(
+                    left_hash, right_hash,
+                ))))
+            }
+            (Operation::NotEqual, TypeData::Bool, TypeData::Bool) => InlinedExpression::Op(
+                Op::NotEqual(BoolOrInt::Bool(BoolArg::Bool_Bool(left_hash, right_hash))),
+            ),
+            (Operation::NotEqual, TypeData::CollectionOfBool, TypeData::Bool) => {
+                InlinedExpression::Op(Op::NotEqual(BoolOrInt::Bool(
+                    BoolArg::CollectionOfBool_Bool(left_hash, right_hash),
+                )))
+            }
+            (Operation::NotEqual, TypeData::Bool, TypeData::CollectionOfBool) => {
+                InlinedExpression::Op(Op::NotEqual(BoolOrInt::Bool(
+                    BoolArg::Bool_CollectionOfBool(left_hash, right_hash),
+                )))
+            }
+            _ => {
+                // these should all be illegal & caught within `namespace` package
+                _unreachable_panic!()
+            }
+        }
+    }
 }
