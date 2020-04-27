@@ -24,7 +24,7 @@ mod macros;
 
 pub mod parser_output;
 mod value;
-
+mod ordering;
 mod cfgbuilder;
 mod formatter;
 mod inliner;
