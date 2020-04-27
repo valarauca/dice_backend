@@ -29,7 +29,7 @@ mod cfgbuilder;
 mod formatter;
 mod inliner;
 mod namespace;
-mod ordering;
+mod runtime;
 mod seahasher;
 mod syntaxhelper;
 mod validator;
