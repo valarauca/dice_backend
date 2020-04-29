@@ -12,7 +12,7 @@ use super::GetType;
 /// programs environment as well.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Literal<'a> {
-    Number(i64),
+    Number(i8),
     Boolean(bool),
     EnvirBool(&'a str),
     EnvirNumber(&'a str),
@@ -53,8 +53,8 @@ fn test_literal_parsing() {
     let parser = LitParser::new();
     assert!(parser.parse("false").unwrap() == Literal::Boolean(false));
     assert!(parser.parse("true").unwrap() == Literal::Boolean(true));
-    assert!(parser.parse("15").unwrap() == Literal::Number(15i64));
-    assert!(parser.parse("-30").unwrap() == Literal::Number(-30i64));
+    assert!(parser.parse("15").unwrap() == Literal::Number(15i8));
+    assert!(parser.parse("-30").unwrap() == Literal::Number(-30i8));
     assert!(parser.parse("%d{{ENV_VAR}}").unwrap() == Literal::EnvirNumber("ENV_VAR"));
     assert!(parser.parse("%b{{ENV_VAR}}").unwrap() == Literal::EnvirBool("ENV_VAR"));
 }

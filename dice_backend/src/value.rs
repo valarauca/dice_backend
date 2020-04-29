@@ -28141,7 +28141,7 @@ fn __action21<'input>(
     input: &'input str,
     (_, int, _): (usize, &'input str, usize),
 ) -> Literal<'input> {
-    Literal::Number(i64::from_str_radix(int, 10).unwrap())
+    Literal::Number(i8::from_str_radix(int, 10).unwrap())
 }
 
 #[allow(unused_variables)]

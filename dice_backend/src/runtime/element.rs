@@ -12,6 +12,10 @@ pub struct Element {
     datum: Datum,
     prob: Rational,
 }
+#[test]
+fn assert_element_size() {
+    assert_eq!(::std::mem::size_of::<Element>(), 64);
+}
 impl Element {
     /// build a new element from a datum
     pub fn new<T>(datum: T, prob: Rational) -> Element

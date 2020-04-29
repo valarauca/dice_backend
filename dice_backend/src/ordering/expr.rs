@@ -904,7 +904,7 @@ impl OrdTrait for OrderedExpression {}
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConstantValue {
     Bool(bool, OrdType),
-    Int(i32, OrdType),
+    Int(i8, OrdType),
 }
 impl AsRef<OrdType> for ConstantValue {
     #[inline(always)]
