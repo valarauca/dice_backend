@@ -1,22 +1,19 @@
-
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use std::ops::Index;
 
-use super::super::parser_output::{TypeData};
-use super::super::inliner::{InlinedCollection};
+use super::super::inliner::InlinedCollection;
+use super::super::parser_output::TypeData;
 
-
-use super::expr::{OrderedExpression};
-use super::ord::{OrdType,OrdTrait};
+use super::expr::OrderedExpression;
+use super::ord::{OrdTrait, OrdType};
 
 /// OrderedCollection is the read-only collection of statements
 #[derive(Clone)]
 pub struct OrderedCollection {
-    data: BTreeMap<u64,OrderedExpression>,
+    data: BTreeMap<u64, OrderedExpression>,
     ret: u64,
 }
 impl OrderedCollection {
-
     /// build a new ordered collection
     pub fn new(old_coll: &InlinedCollection) -> OrderedCollection {
         let mut new_coll = OrderingCollection::default();
@@ -24,7 +21,7 @@ impl OrderedCollection {
         // look up the old return statement
         let ret_id = old_coll.get_return().unwrap();
         let ret = old_coll.get_expr(&ret_id).unwrap();
-        
+
         // recursively walk the AST to build sources & sinks.
         OrderedExpression::new(ret, old_coll, &mut new_coll);
 
@@ -38,37 +35,26 @@ impl OrderedCollection {
     pub fn get_return(&self) -> u64 {
         self.ret.clone()
     }
-}
-impl Index<u64> for OrderedCollection {
-    type Output = OrderedExpression;
 
-    #[inline(always)]
-    fn index<'a>(&'a self, index: u64) -> &'a OrderedExpression {
-        match self.data.get(&index) {
-            Option::Some(x) => x,
-            Option::None => _unreachable_panic!(),
-        }
-    }
-}
-impl Index<&u64> for OrderedCollection {
-    type Output = OrderedExpression;
-    #[inline(always)]
-    fn index<'a>(&'a self, index: &u64) -> &'a OrderedExpression {
-        match self.data.get(index) {
-            Option::Some(x) => x,
-            Option::None => _unreachable_panic!(),
-        }
+    pub fn get_expr<'a>(&'a self, expr: u64) -> Option<&'a OrderedExpression> {
+        self.data.get(&expr)
     }
 
+    pub fn get_mut_expr<'a>(&'a mut self, expr: u64) -> Option<&'a mut OrderedExpression> {
+        self.data.get_mut(&expr)
+    }
+
+    pub fn remove_expr(&mut self, expr: u64) {
+        self.data.remove(&expr);
+    }
 }
 
 /// OrderingCollection is used to build the `OrderedCollection`.
-#[derive(Default,Clone)]
+#[derive(Default, Clone)]
 pub struct OrderingCollection {
-    data: BTreeMap<u64,OrderedExpression>,
+    data: BTreeMap<u64, OrderedExpression>,
 }
 impl OrderingCollection {
-
     /// do we have this id in the collection?
     pub fn contains(&self, id: &u64) -> bool {
         self.get_expr(id).is_some()
@@ -76,7 +62,7 @@ impl OrderingCollection {
 
     /// attempt to insert something into the collection
     pub fn insert(&mut self, arg: OrderedExpression) {
-        let own_id = arg.own_id();
+        let own_id = arg.get_own_id();
         if !self.contains(&own_id) {
             self.data.insert(own_id, arg);
         }
@@ -88,7 +74,8 @@ impl OrderingCollection {
     }
 
     /// tell an expression that it'll be used in the future
-    pub fn set_expr_sink(&mut self,
+    pub fn set_expr_sink(
+        &mut self,
         expr_to_modify: &u64,
         sink_expr_id: u64,
         sink_expr_expected_type: TypeData,
@@ -97,7 +84,6 @@ impl OrderingCollection {
         let mut expr = self.get_mut_expr(expr_to_modify).unwrap();
         expr.add_sink(sink_expr_id, sink_expr_expected_type);
     }
-
 
     /// mutable lookup
     fn get_mut_expr<'a>(&'a mut self, arg: &u64) -> Option<&'a mut OrderedExpression> {

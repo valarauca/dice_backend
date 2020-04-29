@@ -22,17 +22,18 @@ use clap::{App, Arg, SubCommand};
 #[macro_use]
 mod macros;
 
-pub mod parser_output;
-mod value;
-mod ordering;
 mod cfgbuilder;
 mod formatter;
 mod inliner;
 mod namespace;
+mod ordering;
+pub mod parser_output;
+mod peephole;
 mod runtime;
 mod seahasher;
 mod syntaxhelper;
 mod validator;
+mod value;
 
 fn main() {
     let matches = App::new("foxhole")

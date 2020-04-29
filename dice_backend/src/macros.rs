@@ -35,3 +35,20 @@ macro_rules! _unreachable_panic {
         }
     };
 }
+
+/// This is basically `vec![]` but for `SmallVec`.
+///
+/// The core small `SmallVec` is untyped, so providing
+/// an assignment type should handle the internal sizing
+/// restrictions & constraints it requires.
+#[macro_export]
+macro_rules! s_v {
+    ($($arg:expr),* $(,)*) => {
+        {
+            #[allow(unused_mut)]
+            let mut v = ::smallvec::SmallVec::new();
+            $(v.push($arg);)*
+            v
+        }
+    };
+}
