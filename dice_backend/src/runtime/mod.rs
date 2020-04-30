@@ -13,6 +13,7 @@ mod report;
 pub use self::report::Report;
 mod coll;
 pub use self::coll::build_report;
+mod math;
 
 /// create report directly converts source code into a report.
 pub fn create_report(source: &str) -> Result<Report, String> {
