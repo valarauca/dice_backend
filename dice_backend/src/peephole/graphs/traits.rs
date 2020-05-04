@@ -2,8 +2,8 @@ use super::super::super::ordering::OrdTrait;
 use super::Match;
 
 /// ModifyGraph handles the application of a change to a graph.
-pub trait ModifyGraph {
-    fn apply<G: Graph>(&self, graph: &mut G);
+pub trait ModifyGraph<G: Graph> {
+    fn apply(&self, graph: &mut G);
 }
 
 /// Graph is a 'generalized' API for interacting with the graph.
@@ -13,6 +13,11 @@ pub trait ModifyGraph {
 /// to understand what collection they're necessarily interacting
 /// with.
 pub trait Graph {
+    type Expr;
+
+    /// Insert a node into the graph
+    fn insert(&mut self, expr: Self::Expr);
+
     /// This will add the tuple specified by `new_sink` to `expr`.
     ///
     /// No extra work is done.

@@ -12,8 +12,12 @@ use super::super::graphs::{AddSink, Match, Modifications, RemoveSink, Remover, S
 pub struct LenDice {
     _avoid_unsized: bool,
 }
-impl PeepholeMatcher for LenDice {
-    fn item_match(&self, expr: u64, coll: &OrderedCollection) -> Option<Modifications> {
+impl PeepholeMatcher<OrderedExpression> for LenDice {
+    fn item_match(
+        &self,
+        expr: u64,
+        coll: &OrderedCollection,
+    ) -> Option<Modifications<OrderedExpression>> {
         let mut mods = Modifications::default();
         match coll.get_expr(expr) {
             Option::Some(OrderedExpression::StdLib(StdLibraryFunc::Len(ref len))) => {

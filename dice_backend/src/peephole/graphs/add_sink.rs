@@ -13,12 +13,9 @@ impl AddSink {
         Self { to, sink }
     }
 }
-impl ModifyGraph for AddSink {
+impl<G: Graph> ModifyGraph<G> for AddSink {
     /// apply this transform to a graph
-    fn apply<G>(&self, graph: &mut G)
-    where
-        G: Graph,
-    {
+    fn apply(&self, graph: &mut G) {
         graph.add_sink(&self.to, &self.sink);
     }
 }

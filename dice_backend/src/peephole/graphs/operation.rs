@@ -1,4 +1,4 @@
-use super::{AddSink, Graph, ModifyGraph, RemoveSink, Remover, SwapSource};
+use super::{AddSink, Graph, Insert, ModifyGraph, RemoveSink, Remover, SwapSource};
 
 /// Operation is an enum over the permitted graph transformations.
 ///
@@ -7,43 +7,50 @@ use super::{AddSink, Graph, ModifyGraph, RemoveSink, Remover, SwapSource};
 ///
 /// Its trait implementations also allows for the collection of its
 /// arguments to be pretty simple.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub enum Operation {
+#[derive(Clone)]
+pub enum Operation<E: Clone> {
     AddSink(AddSink),
     RemoveSink(RemoveSink),
     SwapSource(SwapSource),
     RemoveExpr(Remover),
+    Inserter(Insert<E>),
 }
-impl From<AddSink> for Operation {
+impl<E: Clone> From<Insert<E>> for Operation<E> {
     #[inline(always)]
-    fn from(add_sink: AddSink) -> Operation {
+    fn from(insert: Insert<E>) -> Self {
+        Operation::Inserter(insert)
+    }
+}
+impl<E: Clone> From<AddSink> for Operation<E> {
+    #[inline(always)]
+    fn from(add_sink: AddSink) -> Self {
         Operation::AddSink(add_sink)
     }
 }
-impl From<RemoveSink> for Operation {
+impl<E: Clone> From<RemoveSink> for Operation<E> {
     #[inline(always)]
-    fn from(remove_sink: RemoveSink) -> Operation {
+    fn from(remove_sink: RemoveSink) -> Self {
         Operation::RemoveSink(remove_sink)
     }
 }
-impl From<SwapSource> for Operation {
+impl<E: Clone> From<SwapSource> for Operation<E> {
     #[inline(always)]
-    fn from(swap_source: SwapSource) -> Operation {
+    fn from(swap_source: SwapSource) -> Self {
         Operation::SwapSource(swap_source)
     }
 }
-impl From<Remover> for Operation {
+impl<E: Clone> From<Remover> for Operation<E> {
     #[inline(always)]
-    fn from(delete: Remover) -> Operation {
+    fn from(delete: Remover) -> Self {
         Operation::RemoveExpr(delete)
     }
 }
-impl ModifyGraph for Operation {
-    fn apply<G>(&self, graph: &mut G)
-    where
-        G: Graph,
-    {
+impl<E: Clone, G: Graph<Expr = E>> ModifyGraph<G> for Operation<E> {
+    fn apply(&self, graph: &mut G) {
         match self {
+            &Operation::Inserter(ref insert) => {
+                insert.apply(graph);
+            }
             &Operation::AddSink(ref add_sink) => {
                 add_sink.apply(graph);
             }

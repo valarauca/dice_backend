@@ -22,12 +22,9 @@ impl SwapSource {
         Self { expr, old, new }
     }
 }
-impl ModifyGraph for SwapSource {
+impl<G: Graph> ModifyGraph<G> for SwapSource {
     /// apply this transform to a graph
-    fn apply<G>(&self, graph: &mut G)
-    where
-        G: Graph,
-    {
+    fn apply(&self, graph: &mut G) {
         graph.compare_and_swap_source(&self.expr, &self.old, &self.new);
     }
 }

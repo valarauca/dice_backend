@@ -13,12 +13,9 @@ impl RemoveSink {
         Self { from, sink }
     }
 }
-impl ModifyGraph for RemoveSink {
+impl<G: Graph> ModifyGraph<G> for RemoveSink {
     /// apply this transform to a graph
-    fn apply<G>(&self, graph: &mut G)
-    where
-        G: Graph,
-    {
+    fn apply(&self, graph: &mut G) {
         graph.remove_sink(&self.from, &self.sink);
     }
 }

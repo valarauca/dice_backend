@@ -16,6 +16,9 @@ pub use self::remove::Remover;
 mod traits;
 pub use self::traits::{Graph, ModifyGraph};
 
+mod inserter;
+pub use self::inserter::Insert;
+
 mod operation;
 pub use self::operation::Operation;
 

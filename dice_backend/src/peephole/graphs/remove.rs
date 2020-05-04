@@ -21,12 +21,9 @@ impl Remover {
         Self { data }
     }
 }
-impl ModifyGraph for Remover {
+impl<G: Graph> ModifyGraph<G> for Remover {
     /// apply this transform to a graph
-    fn apply<G>(&self, graph: &mut G)
-    where
-        G: Graph,
-    {
+    fn apply(&self, graph: &mut G) {
         graph.remove_expr(&self.data);
     }
 }

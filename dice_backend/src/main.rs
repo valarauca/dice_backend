@@ -29,13 +29,13 @@ mod namespace;
 mod ordering;
 pub mod parser_output;
 mod peephole;
+mod run;
 mod runtime;
 mod seahasher;
 mod syntaxhelper;
 mod validator;
 mod value;
-mod run;
-use self::run::{run_path};
+use self::run::run_path;
 
 fn main() {
     let matches = App::new("foxhole")
@@ -45,24 +45,24 @@ fn main() {
         .about("procedural dice roll simulator")
         .set_term_width(80)
         .max_term_width(80)
-        .arg(Arg::with_name("input")
-            .index(1)
-            .required(true)
-            .help("path to the file to run"))
+        .arg(
+            Arg::with_name("input")
+                .index(1)
+                .required(true)
+                .help("path to the file to run"),
+        )
         .get_matches();
     let rc = match matches.value_of("input") {
-        Option::Some(path) => {
-            match run_path(path) {
-                Ok(x) => {
-                    println!("{}", x);
-                    0
-                }
-                Err(e) => {
-                    eprintln!("{}", e);
-                    1
-                }
+        Option::Some(path) => match run_path(path) {
+            Ok(x) => {
+                println!("{}", x);
+                0
             }
-        }
+            Err(e) => {
+                eprintln!("{}", e);
+                1
+            }
+        },
         Option::None => {
             eprintln!("run '-h' for help");
             1
