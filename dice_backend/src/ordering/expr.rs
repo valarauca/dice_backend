@@ -878,6 +878,12 @@ impl OrderedExpression {
         new_coll.insert(item);
     }
 }
+impl PartialEq<TypeData> for OrderedExpression {
+    #[inline(always)]
+    fn eq(&self, other: &TypeData) -> bool {
+        self.as_ref().eq(other)
+    }
+}
 impl AsRef<OrdType> for OrderedExpression {
     #[inline(always)]
     fn as_ref<'a>(&'a self) -> &'a OrdType {
@@ -922,6 +928,12 @@ impl AsMut<OrdType> for ConstantValue {
                 x.as_mut()
             }
         }
+    }
+}
+impl PartialEq<TypeData> for ConstantValue {
+    #[inline(always)]
+    fn eq(&self, other: &TypeData) -> bool {
+        self.as_ref().eq(other)
     }
 }
 impl OrdTrait for ConstantValue {}
@@ -969,6 +981,12 @@ impl AsMut<OrdType> for StdLibraryFunc {
             | &mut StdLibraryFunc::Max(ref mut x)
             | &mut StdLibraryFunc::Min(ref mut x) => x.as_mut(),
         }
+    }
+}
+impl PartialEq<TypeData> for StdLibraryFunc {
+    #[inline(always)]
+    fn eq(&self, other: &TypeData) -> bool {
+        self.as_ref().eq(other)
     }
 }
 impl OrdTrait for StdLibraryFunc {}
@@ -1024,6 +1042,12 @@ impl AsMut<OrdType> for Op {
             | &mut Op::Or(ref mut x)
             | &mut Op::And(ref mut x) => x.as_mut(),
         }
+    }
+}
+impl PartialEq<TypeData> for Op {
+    #[inline(always)]
+    fn eq(&self, other: &TypeData) -> bool {
+        self.as_ref().eq(other)
     }
 }
 impl OrdTrait for Op {}

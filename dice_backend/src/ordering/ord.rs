@@ -8,7 +8,7 @@ use super::super::parser_output::TypeData;
 pub type ExprVec = SmallVec<[(u64, TypeData); 2]>;
 
 /// OrdTrait contains information about the ordering of an expression
-pub trait OrdTrait: AsRef<OrdType> + AsMut<OrdType> {
+pub trait OrdTrait: AsRef<OrdType> + AsMut<OrdType> + PartialEq<TypeData> {
     /// returns the expression id of -this- expression.
     fn get_own_id(&self) -> u64 {
         self.as_ref().self_id.clone()
@@ -124,6 +124,11 @@ impl OrdType {
             .iter()
             .map(|(expr_id, expr_kind)| *expr_id == id && *expr_kind == kind)
             .fold(false, |a, b| a | b)
+    }
+}
+impl PartialEq<TypeData> for OrdType {
+    fn eq(&self, other: &TypeData) -> bool {
+        self.self_type.eq(other)
     }
 }
 impl AsRef<OrdType> for OrdType {
