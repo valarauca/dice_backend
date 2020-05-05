@@ -59,11 +59,11 @@ pub trait OrdTrait: AsRef<OrdType> + AsMut<OrdType> + PartialEq<TypeData> {
         }
     }
 
-    fn remove_source(&mut self, id: u64, kind: TypeData) {
-        match search_for_index(self.get_sinks(), id, kind) {
-            Option::None => _unreachable_panic!("item with id:{:?} kind:{:?}", id, kind),
+    fn cas_source(&mut self, old_id: u64, old_kind: TypeData, new_id: u64, new_kind: TypeData) {
+        match search_for_index(self.get_sources(), old_id, old_kind) {
+            Option::None => _unreachable_panic!("item with id:{:?} kind:{:?}", old_id, old_kind),
             Option::Some(index) => {
-                self.as_mut().sources.remove(index);
+                self.as_mut().sources[index] = (new_id, new_kind);
             }
         }
     }
