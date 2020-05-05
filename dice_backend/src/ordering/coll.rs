@@ -54,8 +54,23 @@ impl OrderedCollection {
         self.data.keys()
     }
 
-    pub fn next_free_id(&self) -> u64 {
-        for i in 0..u64::MAX {
+    pub fn next_free_id<I>(&self, isnt: I) -> u64
+    where
+        I: IntoIterator<Item = u64> + Clone,
+    {
+        let iter = (0u64..u64::MAX).filter_map(|x: u64| -> Option<u64> {
+            let bad_value = isnt
+                .clone()
+                .into_iter()
+                .map(|isnt_val| isnt_val == x)
+                .fold(false, |x, y| x | y);
+            if bad_value {
+                None
+            } else {
+                Some(x)
+            }
+        });
+        for i in iter {
             if self.data.get(&i).is_none() {
                 return i;
             }

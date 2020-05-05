@@ -1,3 +1,4 @@
 pub mod graphs;
 mod holes;
-mod traits;
+
+pub use self::holes::brute_force_optimize;

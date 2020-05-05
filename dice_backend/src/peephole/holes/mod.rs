@@ -9,6 +9,7 @@ pub mod inline_div;
 pub mod inline_mul;
 pub mod inline_or;
 pub mod inline_sub;
+pub mod join_rolls;
 pub mod len_dice;
 
 /// Peeping is a basic signature to define an operation
@@ -23,6 +24,7 @@ const OPT: &'static [Peeping] = &[
     &inline_and::and_inline,
     &inline_or::or_inline,
     &len_dice::len_dice,
+    &join_rolls::join_roll,
 ];
 
 pub fn brute_force_optimize(coll: &mut OrderedCollection) {

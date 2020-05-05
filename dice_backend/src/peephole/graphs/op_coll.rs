@@ -1,17 +1,15 @@
-use smallvec::SmallVec;
-
 use super::{Graph, ModifyGraph, Operation};
 
 /// Modifications allows for the easy collection of modifications
 /// to a graph.
 #[derive(Clone)]
 pub struct Modifications<E: Clone> {
-    data: SmallVec<[Operation<E>; 1]>,
+    data: Vec<Operation<E>>,
 }
 impl<E: Clone> Default for Modifications<E> {
     fn default() -> Self {
         Self {
-            data: SmallVec::default(),
+            data: Vec::with_capacity(4),
         }
     }
 }

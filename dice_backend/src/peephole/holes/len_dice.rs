@@ -2,8 +2,6 @@ use super::super::super::ordering::{
     OrdTrait, OrderedCollection, OrderedExpression, StdLibraryFunc,
 };
 
-use super::super::traits::PeepholeMatcher;
-
 use super::super::graphs::{AddSink, Match, Modifications, RemoveSink, Remover, SwapSource};
 
 /// LenDice handles taking the `len(roll_dice6(VAR))` or `len(roll_dice3(VAR))`

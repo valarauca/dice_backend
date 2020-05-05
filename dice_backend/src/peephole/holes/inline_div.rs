@@ -1,8 +1,6 @@
 use super::super::super::ordering::*;
 use super::super::super::parser_output::TypeData;
 
-use super::super::traits::PeepholeMatcher;
-
 use super::super::graphs::*;
 use super::interior;
 
@@ -17,7 +15,7 @@ pub fn div_inline(expr: u64, coll: &OrderedCollection) -> Option<Modifications<O
         }
         _ => return None,
     };
-    let new_id = coll.next_free_id();
+    let new_id = coll.next_free_id(None);
 
     // both arguments must be a constant
     match (
