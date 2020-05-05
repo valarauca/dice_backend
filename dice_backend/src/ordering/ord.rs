@@ -126,6 +126,11 @@ impl OrdType {
             .fold(false, |a, b| a | b)
     }
 }
+impl PartialEq<TypeData> for &OrdType {
+    fn eq(&self, other: &TypeData) -> bool {
+        <OrdType as PartialEq<TypeData>>::eq(*self, other)
+    }
+}
 impl PartialEq<TypeData> for OrdType {
     fn eq(&self, other: &TypeData) -> bool {
         self.self_type.eq(other)

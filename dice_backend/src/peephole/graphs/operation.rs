@@ -1,4 +1,4 @@
-use super::{AddSink, Graph, Insert, ModifyGraph, RemoveSink, Remover, SwapSource};
+use super::{AddSink, Graph, Inserter, ModifyGraph, RemoveSink, Remover, SwapSource};
 
 /// Operation is an enum over the permitted graph transformations.
 ///
@@ -13,11 +13,11 @@ pub enum Operation<E: Clone> {
     RemoveSink(RemoveSink),
     SwapSource(SwapSource),
     RemoveExpr(Remover),
-    Inserter(Insert<E>),
+    Inserter(Inserter<E>),
 }
-impl<E: Clone> From<Insert<E>> for Operation<E> {
+impl<E: Clone> From<Inserter<E>> for Operation<E> {
     #[inline(always)]
-    fn from(insert: Insert<E>) -> Self {
+    fn from(insert: Inserter<E>) -> Self {
         Operation::Inserter(insert)
     }
 }

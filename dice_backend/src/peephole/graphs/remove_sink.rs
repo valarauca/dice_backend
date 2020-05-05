@@ -9,7 +9,13 @@ pub struct RemoveSink {
 }
 impl RemoveSink {
     #[inline(always)]
-    pub fn new(from: Match, sink: Match) -> Self {
+    pub fn new<A, B>(from: A, sink: B) -> Self
+    where
+        Match: From<A>,
+        Match: From<B>,
+    {
+        let from = Match::from(from);
+        let sink = Match::from(sink);
         Self { from, sink }
     }
 }

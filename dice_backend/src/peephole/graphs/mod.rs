@@ -17,7 +17,7 @@ mod traits;
 pub use self::traits::{Graph, ModifyGraph};
 
 mod inserter;
-pub use self::inserter::Insert;
+pub use self::inserter::Inserter;
 
 mod operation;
 pub use self::operation::Operation;

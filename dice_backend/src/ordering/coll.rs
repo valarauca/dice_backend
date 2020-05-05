@@ -47,6 +47,15 @@ impl OrderedCollection {
     pub fn remove_expr(&mut self, expr: u64) {
         self.data.remove(&expr);
     }
+
+    pub fn next_free_id(&self) -> u64 {
+        for i in 0..u64::MAX {
+            if self.data.get(&i).is_none() {
+                return i;
+            }
+        }
+        panic!("ZOMG");
+    }
 }
 
 /// OrderingCollection is used to build the `OrderedCollection`.
@@ -88,5 +97,14 @@ impl OrderingCollection {
     /// mutable lookup
     fn get_mut_expr<'a>(&'a mut self, arg: &u64) -> Option<&'a mut OrderedExpression> {
         self.data.get_mut(arg)
+    }
+
+    pub fn next_free_id(&self) -> u64 {
+        for i in 0..u64::MAX {
+            if self.data.get(&i).is_none() {
+                return i;
+            }
+        }
+        panic!("ZOMG");
     }
 }

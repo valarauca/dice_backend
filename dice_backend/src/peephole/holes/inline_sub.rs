@@ -5,14 +5,14 @@ use super::super::traits::PeepholeMatcher;
 
 use super::super::graphs::*;
 
-/// InlineAdd attempts to inline an addition operation.
+/// InlineSub attempts to inline an addition operation.
 ///
-/// This requires 1 of the 2 arguments to the Add expression is a constant.
+/// This requires 1 of the 2 arguments to the Sub expression is a constant.
 #[derive(Default)]
-pub struct InlineAdd {
+pub struct InlineSub {
     _avoid_unsided: bool,
 }
-impl PeepholeMatcher<OrderedExpression> for InlineAdd {
+impl PeepholeMatcher<OrderedExpression> for InlineSub {
     fn item_match(
         &self,
         expr: u64,
@@ -22,7 +22,7 @@ impl PeepholeMatcher<OrderedExpression> for InlineAdd {
 
         // assert we're dealing with addition
         let add_op = match coll.get_expr(expr) {
-            Option::Some(OrderedExpression::Op(Op::Add(ref add_op))) => {
+            Option::Some(OrderedExpression::Op(Op::Sub(ref add_op))) => {
                 if add_op != TypeData::Int {
                     return None;
                 }

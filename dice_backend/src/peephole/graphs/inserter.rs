@@ -3,16 +3,16 @@ use super::Match;
 
 /// Insert a node into the graph
 #[derive(Clone)]
-pub struct Insert<E: Clone> {
+pub struct Inserter<E: Clone> {
     expr: E,
 }
-impl<E: Clone> Insert<E> {
+impl<E: Clone> Inserter<E> {
     #[inline(always)]
     pub fn new(expr: E) -> Self {
         Self { expr }
     }
 }
-impl<E, G> ModifyGraph<G> for Insert<E>
+impl<E, G> ModifyGraph<G> for Inserter<E>
 where
     E: Clone,
     G: Graph<Expr = E>,
