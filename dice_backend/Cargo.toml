@@ -22,3 +22,11 @@ itertools = "0.9.0"
 [features]
 default = []
 drop_unreachable_branches = []
+
+[profile.release]
+opt-level = 3
+debug = 2
+lto = true
+codegen-units = 1
+panic = 'unwind'
+overflow-checks = false

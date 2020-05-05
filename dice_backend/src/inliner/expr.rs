@@ -122,7 +122,7 @@ pub enum InlinedExpression {
     /// return the minimum in a collection
     Min(u64),
 
-    ConstantInt(i32),
+    ConstantInt(i8),
     ConstantBool(bool),
     Op(Op),
 }
@@ -155,7 +155,7 @@ impl<'a> InlinedExpression {
             &HashedExpression::ConstantValue(Literal::EnvirNumber(ref envir_name), _) => {
                 let i = ::std::env::vars()
                     .filter(|(name, _)| envir_name == name)
-                    .flat_map(|(_, var)| i32::from_str(&var).ok())
+                    .flat_map(|(_, var)| i8::from_str(&var).ok())
                     .next()
                     .expect(&format!(
                         "could not fine value {} in environment",
@@ -164,7 +164,7 @@ impl<'a> InlinedExpression {
                 InlinedExpression::ConstantInt(i)
             }
             &HashedExpression::ConstantValue(Literal::Number(i), _) => {
-                InlinedExpression::ConstantInt(i as i32)
+                InlinedExpression::ConstantInt(i as i8)
             }
             &HashedExpression::ConstantValue(Literal::Boolean(b), _) => {
                 InlinedExpression::ConstantBool(b)

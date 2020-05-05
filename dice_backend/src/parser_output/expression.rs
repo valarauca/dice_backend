@@ -68,19 +68,19 @@ fn test_expression_parsing() {
     assert!(
         parser.parse("15").unwrap()
             == Expression::Literal(LiteralValue {
-                lit: Literal::Number(15i64)
+                lit: Literal::Number(15i8)
             })
     );
     assert!(
         parser.parse("-35").unwrap()
             == Expression::Literal(LiteralValue {
-                lit: Literal::Number(-35i64)
+                lit: Literal::Number(-35i8)
             })
     );
     assert!(
         parser.parse("-35").unwrap()
             == Expression::Literal(LiteralValue {
-                lit: Literal::Number(-35i64)
+                lit: Literal::Number(-35i8)
             })
     );
     assert!(
@@ -98,13 +98,13 @@ fn test_expression_parsing() {
     assert!(
         parser.parse("15").unwrap()
             == Expression::Literal(LiteralValue {
-                lit: Literal::Number(15i64)
+                lit: Literal::Number(15i8)
             })
     );
     assert!(
         parser.parse("-30").unwrap()
             == Expression::Literal(LiteralValue {
-                lit: Literal::Number(-30i64)
+                lit: Literal::Number(-30i8)
             })
     );
     assert!(
@@ -134,10 +134,10 @@ fn test_expression_parsing() {
             })
     );
     assert!(
-        parser.parse("( 2067 + %d{{INPUT_VALUE_TEST}} )").unwrap()
+        parser.parse("( 20 + %d{{INPUT_VALUE_TEST}} )").unwrap()
             == Expression::Operation(OperationResult {
                 left: Box::new(Expression::Literal(LiteralValue {
-                    lit: Literal::Number(2067)
+                    lit: Literal::Number(20)
                 })),
                 op: Operation::Add,
                 right: Box::new(Expression::Literal(LiteralValue {

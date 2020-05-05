@@ -72,7 +72,7 @@ impl Report {
 
 impl FromIterator<Element> for Report {
     fn from_iter<T: IntoIterator<Item = Element>>(iter: T) -> Self {
-        let mut iter = iter.into_iter();
+        let iter = iter.into_iter();
         let capacity = match iter.size_hint() {
             (0, Option::None) => 0,
             (x, Option::None) => x,

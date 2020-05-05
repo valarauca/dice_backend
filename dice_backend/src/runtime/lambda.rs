@@ -117,7 +117,7 @@ pub fn from_op(arg: &Op) -> Combinator {
     #[inline(always)]
     fn int_scalar<T, F>(lambda: F) -> impl 'static + Fn((Element, Element)) -> Element
     where
-        F: Fn(i32, i32) -> T + 'static,
+        F: Fn(i8, i8) -> T + 'static,
         Datum: From<T>,
     {
         move |(i1, i2): (Element, Element)| -> Element {
@@ -130,7 +130,7 @@ pub fn from_op(arg: &Op) -> Combinator {
     #[inline(always)]
     fn int_coll_scalar<F>(lambda: F) -> impl Fn((Element, Element)) -> Element
     where
-        F: Fn(&mut i32, i32),
+        F: Fn(&mut i8, i8),
     {
         move |(collection, item): (Element, Element)| -> Element {
             let (collection_data, collection_prob) = collection.split();
@@ -148,7 +148,7 @@ pub fn from_op(arg: &Op) -> Combinator {
     #[inline(always)]
     fn int_coll_bool<F>(lambda: F) -> impl Fn((Element, Element)) -> Element
     where
-        F: Fn(i32, i32) -> bool,
+        F: Fn(i8, i8) -> bool,
     {
         move |(collection, item): (Element, Element)| -> Element {
             let (collection_data, collection_prob) = collection.split();
@@ -426,7 +426,7 @@ pub fn const_bool(b: bool) -> Init {
 }
 
 /// build a constant int generator
-pub fn const_int(x: i32) -> Init {
+pub fn const_int(x: i8) -> Init {
     new_init(move || -> Iter {
         let v: Option<Element> = Some(Element::new(x, Rational::from_integer(1)));
         new_iter(v)
@@ -470,7 +470,7 @@ pub fn len() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
         new_iter(iter.map(|e| -> Element {
             let (datum, prob) = e.split();
-            Element::new(datum.len() as i32, prob)
+            Element::new(datum.len(), prob)
         }))
     })
 }
@@ -480,7 +480,7 @@ pub fn count() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
         new_iter(iter.map(|e| -> Element {
             let (datum, prob) = e.split();
-            let count = datum.get_bool_vec().iter().filter(|x| **x).count() as i32;
+            let count = datum.get_bool_vec().iter().filter(|x| **x).count() as i8;
             Element::new(count, prob)
         }))
     })
@@ -600,10 +600,10 @@ pub fn d6() -> Chain {
 fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
     // lambda for the base case (rolling 1 dice)
     let lambda =
-        move |x: i32| -> Element { Element::new([x], base_prob / Rational::from_integer(6)) };
+        move |x: i8| -> Element { Element::new([x], base_prob / Rational::from_integer(6)) };
 
     // lambda for other cases (rolling >1 dice)
-    let joiner = move |tup: (Element, i32)| -> Element {
+    let joiner = move |tup: (Element, i8)| -> Element {
         let (e, x) = (tup.0, tup.1);
         let (mut datum, prob) = e.split();
         datum.append_int(x);
@@ -635,10 +635,10 @@ fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
 fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
     // lambda for the base case (rolling 1 dice)
     let lambda =
-        move |x: i32| -> Element { Element::new([x], base_prob / Rational::from_integer(3)) };
+        move |x: i8| -> Element { Element::new([x], base_prob / Rational::from_integer(3)) };
 
     // lambda for other cases (rolling >1 dice)
-    let joiner = move |tup: (Element, i32)| -> Element {
+    let joiner = move |tup: (Element, i8)| -> Element {
         let (e, x) = (tup.0, tup.1);
         let (mut datum, prob) = e.split();
         datum.append_int(x);

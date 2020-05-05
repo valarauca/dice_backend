@@ -52,7 +52,7 @@ fn test_statement_parse() {
         name: "arg",
         kind: TypeData::Int,
         expr: Expression::Literal(LiteralValue {
-            lit: Literal::Number(15i64),
+            lit: Literal::Number(15i8),
         }),
     });
     assert!(parser.parse("let arg: int = 15;").unwrap() == stmt);

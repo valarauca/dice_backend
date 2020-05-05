@@ -7,6 +7,11 @@ pub enum TypeData {
     CollectionOfBool,
     CollectionOfInt,
 }
+impl Default for TypeData {
+    fn default() -> Self {
+        Self::Bool
+    }
+}
 impl fmt::Display for TypeData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
