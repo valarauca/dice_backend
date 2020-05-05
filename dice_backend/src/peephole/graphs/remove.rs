@@ -5,7 +5,6 @@ use super::Match;
 ///
 /// It is not _directly_ responsible for rewriting edges,
 /// this should be specified by other operations.
-#[repr(packed)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Remover {
     data: Match,

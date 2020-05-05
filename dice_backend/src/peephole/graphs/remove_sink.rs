@@ -1,7 +1,6 @@
 use super::traits::{Graph, ModifyGraph};
 use super::Match;
 
-#[repr(packed)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct RemoveSink {
     from: Match,

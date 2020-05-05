@@ -1,7 +1,6 @@
 use super::traits::{Graph, ModifyGraph};
 use super::Match;
 
-#[repr(packed)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct AddSink {
     to: Match,
@@ -9,7 +8,13 @@ pub struct AddSink {
 }
 impl AddSink {
     #[inline(always)]
-    pub fn new(to: Match, sink: Match) -> Self {
+    pub fn new<A, B>(to: A, sink: B) -> Self
+    where
+        Match: From<A>,
+        Match: From<B>,
+    {
+        let to = Match::from(to);
+        let sink = Match::from(sink);
         Self { to, sink }
     }
 }

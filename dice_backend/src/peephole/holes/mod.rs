@@ -61,7 +61,7 @@ where
     B: OrdTrait,
     C: OrdTrait,
 {
-    use super::graphs::{Modifications, RemoveSink, Remover, SwapSource};
+    use super::graphs::{Match, Modifications, RemoveSink, Remover, SwapSource};
 
     let mut mods = Modifications::default();
     let mut new_constant = OrdType::new(new_id, kind, s_v![]);
@@ -76,6 +76,11 @@ where
         ));
         new_constant.add_sink(sink.0, sink.1);
     }
+    mods.push(SwapSource::new(
+        Match::default(),
+        root.get_matcher_tuple(),
+        new_constant.get_matcher_tuple(),
+    ));
 
     // determine if we can drop our sink?
     mods.push(RemoveSink::new(x_args, root));

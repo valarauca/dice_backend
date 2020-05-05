@@ -131,6 +131,11 @@ impl PartialEq<TypeData> for &OrdType {
         <OrdType as PartialEq<TypeData>>::eq(*self, other)
     }
 }
+impl PartialEq<TypeData> for &mut OrdType {
+    fn eq(&self, other: &TypeData) -> bool {
+        <OrdType as PartialEq<TypeData>>::eq(*self, other)
+    }
+}
 impl PartialEq<TypeData> for OrdType {
     fn eq(&self, other: &TypeData) -> bool {
         self.self_type.eq(other)

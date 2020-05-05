@@ -5,11 +5,25 @@ use super::super::super::parser_output::TypeData;
 /// it basically gives an expression id `u64` and a `TypeData`
 /// which should uniquely identify an expression within the
 /// context of its operation.
-#[repr(packed)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default)]
 pub struct Match {
-    pub kind: TypeData,
-    pub id: u64,
+    kind: Option<TypeData>,
+    id: Option<u64>,
+}
+impl Match {
+    pub fn get_kind(&self) -> Option<TypeData> {
+        self.kind.clone()
+    }
+    pub fn get_id(&self) -> Option<u64> {
+        self.id.clone()
+    }
+
+    pub fn none() -> Match {
+        Match {
+            id: None,
+            kind: None,
+        }
+    }
 }
 impl<T: OrdTrait> From<&T> for Match {
     #[inline(always)]
@@ -21,6 +35,7 @@ impl From<&&(u64, TypeData)> for Match {
     #[inline(always)]
     fn from(arg: &&(u64, TypeData)) -> Self {
         let (id, kind) = **arg;
+        let (id, kind) = (Some(id), Some(kind));
         Self { id, kind }
     }
 }
@@ -28,6 +43,7 @@ impl From<&(u64, TypeData)> for Match {
     #[inline(always)]
     fn from(arg: &(u64, TypeData)) -> Self {
         let (id, kind) = *arg;
+        let (id, kind) = (Some(id), Some(kind));
         Self { id, kind }
     }
 }
@@ -35,12 +51,14 @@ impl From<(u64, TypeData)> for Match {
     #[inline(always)]
     fn from(arg: (u64, TypeData)) -> Self {
         let (id, kind) = arg;
+        let (id, kind) = (Some(id), Some(kind));
         Self { id, kind }
     }
 }
 impl Match {
     #[inline(always)]
     pub fn new(id: u64, kind: TypeData) -> Self {
+        let (id, kind) = (Some(id), Some(kind));
         Self { id, kind }
     }
 }

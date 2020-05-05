@@ -1,12 +1,53 @@
-use super::super::super::ordering::{
-    OrdTrait, OrderedCollection, OrderedExpression, StdLibraryFunc,
-};
-
-use super::super::graphs::{AddSink, Match, Modifications, RemoveSink, Remover, SwapSource};
+use super::super::super::ordering::*;
+use super::super::graphs::*;
 
 /// LenDice handles taking the `len(roll_dice6(VAR))` or `len(roll_dice3(VAR))`
 /// and reducing this to just `VAR`.
 
+pub fn len_dice(expr: u64, coll: &OrderedCollection) -> Option<Modifications<OrderedExpression>> {
+    // are we dealing with a length?
+    let len_op = match coll.get_expr(expr).unwrap() {
+        OrderedExpression::StdLib(StdLibraryFunc::Len(ref len_op)) => len_op,
+        _ => return None,
+    };
+
+    // ensure we have something like `len(roll_d6(_))` or `len(roll_d3(_))`
+    let roll_op = match coll.get_expr(len_op.get_sources()[0].0).unwrap() {
+        OrderedExpression::StdLib(StdLibraryFunc::D6(ref roll)) => roll,
+        OrderedExpression::StdLib(StdLibraryFunc::D3(ref roll)) => roll,
+        _ => return None,
+    };
+
+    // ensure the `roll_d6(_)` or `roll_d3(_)` point to a constant
+    let count_args = match coll.get_expr(roll_op.get_sources()[0].0).unwrap() {
+        OrderedExpression::Constant(ConstantValue::Int(_, ref count_args)) => count_args,
+        _ => return None,
+    };
+
+    let mut mods = Modifications::default();
+    mods.push(SwapSource::new(Match::default(), len_op, count_args));
+    // where ever `len_op` flowed into, we can replace it with the constant
+    for sink in len_op.get_sinks() {
+        mods.push(SwapSource::new(sink, len_op, count_args));
+        mods.push(AddSink::new(count_args, sink));
+    }
+    // special case for return value
+
+    // we can remove `len_op`
+    mods.push(Remover::new(len_op));
+
+    // inform the `roll_op` it isn't be consumed by `len_op`
+    mods.push(RemoveSink::new(roll_op, len_op));
+    if roll_op.get_sinks().len() == 1 {
+        // if `roll_op` is only consumed once... and we just
+        // removed the only consumption, we can remove it.
+        mods.push(Remover::new(roll_op));
+    }
+
+    Some(mods)
+}
+
+/*
 pub fn len_dice(expr: u64, coll: &OrderedCollection) -> Option<Modifications<OrderedExpression>> {
     let mut mods = Modifications::default();
     match coll.get_expr(expr) {
@@ -59,3 +100,4 @@ pub fn len_dice(expr: u64, coll: &OrderedCollection) -> Option<Modifications<Ord
         _ => None,
     }
 }
+*/

@@ -77,6 +77,14 @@ impl OrderedCollection {
         }
         panic!("ZOMG");
     }
+
+    // stupid function to work around the borrow checker
+    fn exists(&self, id: u64, kind: TypeData) -> bool {
+        match self.get_expr(id) {
+            Option::Some(expr) if expr.as_ref() == kind => true,
+            _ => false,
+        }
+    }
 }
 impl Graph for OrderedCollection {
     type Expr = OrderedExpression;
@@ -91,28 +99,86 @@ impl Graph for OrderedCollection {
     }
 
     fn add_sink(&mut self, expr: &Match, new_sink: &Match) {
-        #[allow(unused_mut)]
-        let mut expr_data = self.get_mut_expr(expr.id).unwrap();
-        expr_data.add_sink(new_sink.id, new_sink.kind);
-        debug_assert_eq!(expr.kind, expr_data.get_own_type());
+        match expr
+            .get_id()
+            .into_iter()
+            .zip(expr.get_kind())
+            .zip(new_sink.get_id())
+            .zip(new_sink.get_kind())
+            .filter(|tup| self.exists(((tup.0).0).0, ((tup.0).0).1))
+            .map(|(((expr_id, _), sink_id), sink_kind)| (expr_id, sink_id, sink_kind))
+            .next()
+        {
+            Option::None => {}
+            Option::Some((expr_id, sink_id, sink_kind)) => {
+                // the exists check proves that it exists & is the right type
+                self.get_mut_expr(expr_id)
+                    .unwrap()
+                    .add_sink(sink_id, sink_kind);
+            }
+        };
     }
 
     fn remove_sink(&mut self, expr: &Match, new_sink: &Match) {
-        #[allow(unused_mut)]
-        let mut expr_data = self.get_mut_expr(expr.id).unwrap();
-        expr_data.remove_sink(new_sink.id, new_sink.kind);
-        debug_assert_eq!(expr.kind, expr_data.get_own_type());
+        match expr
+            .get_id()
+            .into_iter()
+            .zip(expr.get_kind())
+            .zip(new_sink.get_id())
+            .zip(new_sink.get_kind())
+            .filter(|tup| self.exists(((tup.0).0).0, ((tup.0).0).1))
+            .map(|(((expr_id, _), sink_id), sink_kind)| (expr_id, sink_id, sink_kind))
+            .next()
+        {
+            Option::None => {}
+            Option::Some((expr_id, sink_id, sink_kind)) => {
+                // the exists check proves that it exists & is the right type
+                self.get_mut_expr(expr_id)
+                    .unwrap()
+                    .remove_sink(sink_id, sink_kind);
+            }
+        };
     }
 
     fn compare_and_swap_source(&mut self, expr: &Match, old: &Match, new: &Match) {
-        #[allow(unused_mut)]
-        let mut expr_data = self.get_mut_expr(expr.id).unwrap();
-        debug_assert_eq!(expr.kind, expr_data.get_own_type());
-        expr_data.cas_source(old.id, old.kind, new.id, new.kind);
+        // update a source
+        match expr
+            .get_id()
+            .into_iter()
+            .zip(expr.get_kind())
+            .zip(old.get_id().into_iter().zip(old.get_kind()))
+            .zip(new.get_id().into_iter().zip(new.get_kind()))
+            .filter(|tup| self.exists(((tup.0).0).0, ((tup.0).0).1))
+            .map(|(((expr_id, _), (old_id, old_kind)), (new_id, new_kind))| {
+                (expr_id, old_id, old_kind, new_id, new_kind)
+            })
+            .next()
+        {
+            Option::Some((expr_id, old_id, old_kind, new_id, new_kind)) => {
+                self.get_mut_expr(expr_id)
+                    .unwrap()
+                    .cas_source(old_id, old_kind, new_id, new_kind);
+            }
+            _ => {}
+        };
+
+        // possible update the return statement
+        // avoid the `expr`
+        match old.get_id().into_iter().zip(new.get_id()).next() {
+            Option::Some((old_id, new_id)) if self.ret == old_id => {
+                self.ret = new_id;
+            }
+            _ => {}
+        };
     }
 
     fn remove_expr(&mut self, expr: &Match) {
-        self.remove_expr(expr.id);
+        match expr.get_id() {
+            Option::Some(id) => {
+                self.remove_expr(id);
+            }
+            _ => {}
+        };
     }
 }
 

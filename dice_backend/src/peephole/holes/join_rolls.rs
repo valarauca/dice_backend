@@ -115,6 +115,12 @@ where
         ));
         new_roll.add_sink(sink.0, sink.1);
     }
+    // handle if we have some `analyze join(_,_)`
+    mods.push(SwapSource::new(
+        Match::default(),
+        join_op.get_matcher_tuple(),
+        new_roll.get_matcher_tuple(),
+    ));
 
     // remove the join operation itself
     mods.push(Remover::new(join_op));
