@@ -1,10 +1,16 @@
 mod ord;
 pub use self::ord::{OrdTrait, OrdType};
+mod matcher;
+pub use self::matcher::{Match, MatchTrait};
 mod expr;
 pub use self::expr::{ConstantValue, Op, OrderedExpression, StdLibraryFunc};
+mod graphs;
+pub use self::graphs::{
+    AddSink, Graph, Inserter, ModifyGraph, Operation, RemoveSink, Remover, SwapSource,
+};
 mod coll;
-pub use self::coll::OrderedCollection;
 
+/*
 #[cfg(test)]
 mod test {
     use super::{
@@ -76,3 +82,4 @@ analyze (sum(dice) - min(dice));
         }
     }
 }
+*/

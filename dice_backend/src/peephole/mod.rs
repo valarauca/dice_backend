@@ -23,6 +23,23 @@ mod test {
     }
 
     #[test]
+    fn test_inline_add() {
+        /*
+         * This test actually involves 2 optimization actions "doing the right thing"
+         *
+         */
+        let dut = r#"analyze (2 + len(roll_d6(3)));"#;
+        let mut coll = build_coll(dut);
+        brute_force_optimize(&mut coll);
+        match coll.get_expr(coll.get_return()) {
+            Option::Some(OrderedExpression::Constant(ConstantValue::Int(5,_))) => {
+                // yay!
+            }
+            what_ever => panic!("{:?}", what_ever)
+        };
+    }
+
+    #[test]
     fn test_join_roll() {
         let dut = r#"analyze join(roll_d6(2), roll_d6(3));"#;
         let mut coll = build_coll(dut);

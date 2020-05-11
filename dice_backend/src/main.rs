@@ -28,7 +28,7 @@ mod inliner;
 mod namespace;
 mod ordering;
 pub mod parser_output;
-mod peephole;
+//mod peephole;
 mod run;
 mod runtime;
 mod seahasher;

@@ -104,7 +104,7 @@ where
         TypeData::CollectionOfInt,
         s_v![(new_const_id, TypeData::Int)],
     );
-    new_const.add_sink(new_roll.get_own_id(), new_roll.get_own_type());
+    new_const.add_sink(new_roll.get_own_id(), TypeData::Int);
 
     // for every `join(_,_)`'s result flows, we need to update that.
     for sink in join_op.get_sinks() {

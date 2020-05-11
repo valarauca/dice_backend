@@ -74,7 +74,7 @@ where
             root.get_matcher_tuple(),
             new_constant.get_matcher_tuple(),
         ));
-        new_constant.add_sink(sink.0, sink.1);
+        new_constant.add_sink(sink.0, kind);
     }
     mods.push(SwapSource::new(
         Match::default(),

@@ -5,7 +5,7 @@ use super::super::inliner::{
 use super::super::parser_output::TypeData;
 
 use super::coll::OrderingCollection;
-use super::ord::{ExprVec, OrdTrait, OrdType};
+use super::{Match, MatchTrait, OrdTrait, OrdType};
 
 const I: TypeData = TypeData::Int;
 const B: TypeData = TypeData::Bool;
@@ -15,6 +15,7 @@ const C_B: TypeData = TypeData::CollectionOfBool;
 /// Various Expressions
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum OrderedExpression {
+    Final(OrdType),
     StdLib(StdLibraryFunc),
     Constant(ConstantValue),
     Op(Op),
@@ -44,9 +45,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, I);
                 OrderedExpression::StdLib(StdLibraryFunc::D6(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*arg, I)],
+                    (self_id, C_I),
+                    s_v![[_;1]; (*arg, I)],
                 )))
             }
             &InlinedExpression::D3(ref arg) => {
@@ -57,9 +57,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, I);
                 OrderedExpression::StdLib(StdLibraryFunc::D3(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*arg, I)],
+                    (self_id, C_I),
+                    s_v![[_;1]; (*arg, I)],
                 )))
             }
             &InlinedExpression::Sum(ref arg) => {
@@ -70,9 +69,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, C_I);
                 OrderedExpression::StdLib(StdLibraryFunc::Sum(OrdType::new(
-                    self_id,
-                    I,
-                    s_v![(*arg, C_I)],
+                    (self_id, I),
+                    s_v![[_;1]; (*arg, C_I)],
                 )))
             }
             &InlinedExpression::Max(ref arg) => {
@@ -83,9 +81,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, C_I);
                 OrderedExpression::StdLib(StdLibraryFunc::Max(OrdType::new(
-                    self_id,
-                    I,
-                    s_v![(*arg, C_I)],
+                    (self_id, I),
+                    s_v![[_;1]; (*arg, C_I)],
                 )))
             }
             &InlinedExpression::Min(ref arg) => {
@@ -96,9 +93,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, C_I);
                 OrderedExpression::StdLib(StdLibraryFunc::Min(OrdType::new(
-                    self_id,
-                    I,
-                    s_v![(*arg, C_I)],
+                    (self_id, I),
+                    s_v![[_;1]; (*arg, C_I)],
                 )))
             }
             &InlinedExpression::Count(ref arg) => {
@@ -109,9 +105,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, C_B);
                 OrderedExpression::StdLib(StdLibraryFunc::Count(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*arg, C_B)],
+                    (self_id, C_B),
+                    s_v![[_;1]; (*arg, C_B)],
                 )))
             }
             &InlinedExpression::Len(ref arg) => {
@@ -122,9 +117,8 @@ impl OrderedExpression {
                 // mark that we use it, and how we use it.
                 new_coll.set_expr_sink(arg, self_id, C_I);
                 OrderedExpression::StdLib(StdLibraryFunc::Len(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*arg, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;1]; (*arg, C_I)],
                 )))
             }
             &InlinedExpression::Filter(ref a, ref b) => {
@@ -139,9 +133,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::StdLib(StdLibraryFunc::Filter(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, C_B), (*b, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, C_B), (*b, C_I)],
                 )))
             }
             &InlinedExpression::Join(ref a, ref b) => {
@@ -156,23 +149,22 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::StdLib(StdLibraryFunc::Join(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, C_I), (*b, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, C_I), (*b, C_I)],
                 )))
             }
             &InlinedExpression::ConstantInt(ref i) => {
                 // no dependent expressions
                 OrderedExpression::Constant(ConstantValue::Int(
                     *i,
-                    OrdType::new(self_id, I, s_v![]),
+                    OrdType::new((self_id, I), Option::<Match>::None),
                 ))
             }
             &InlinedExpression::ConstantBool(ref b) => {
                 // no dependent expressions
                 OrderedExpression::Constant(ConstantValue::Bool(
                     *b,
-                    OrdType::new(self_id, B, s_v![]),
+                    OrdType::new((self_id, B), Option::<Match>::None),
                 ))
             }
             InlinedExpression::Op(IOp::Add(IArg::Int_Int(ref a, ref b))) => {
@@ -186,7 +178,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, I);
 
-                OrderedExpression::Op(Op::Add(OrdType::new(self_id, I, s_v![(*a, I), (*b, I)])))
+                OrderedExpression::Op(Op::Add(OrdType::new(
+                    (self_id, I),
+                    s_v![[_;2]; (*a, I), (*b, I)],
+                )))
             }
             InlinedExpression::Op(IOp::Add(IArg::Int_CollectionOfInt(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -200,9 +195,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::Add(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::Add(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -217,9 +211,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::Add(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::Sub(IArg::Int_Int(ref a, ref b))) => {
@@ -233,7 +226,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, I);
 
-                OrderedExpression::Op(Op::Sub(OrdType::new(self_id, I, s_v![(*a, I), (*b, I)])))
+                OrderedExpression::Op(Op::Sub(OrdType::new(
+                    (self_id, I),
+                    s_v![[_;2]; (*a, I), (*b, I)],
+                )))
             }
             InlinedExpression::Op(IOp::Sub(IArg::Int_CollectionOfInt(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -247,9 +243,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::Sub(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::Sub(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -264,9 +259,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::Sub(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::Mul(IArg::Int_Int(ref a, ref b))) => {
@@ -280,7 +274,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, I);
 
-                OrderedExpression::Op(Op::Mul(OrdType::new(self_id, I, s_v![(*a, I), (*b, I)])))
+                OrderedExpression::Op(Op::Mul(OrdType::new(
+                    (self_id, I),
+                    s_v![[_;2]; (*a, I), (*b, I)],
+                )))
             }
             InlinedExpression::Op(IOp::Mul(IArg::Int_CollectionOfInt(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -294,9 +291,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::Mul(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::Mul(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -311,9 +307,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::Mul(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::Div(IArg::Int_Int(ref a, ref b))) => {
@@ -327,7 +322,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, I);
 
-                OrderedExpression::Op(Op::Div(OrdType::new(self_id, I, s_v![(*a, I), (*b, I)])))
+                OrderedExpression::Op(Op::Div(OrdType::new(
+                    (self_id, I),
+                    s_v![[_;2]; (*a, I), (*b, I)],
+                )))
             }
             InlinedExpression::Op(IOp::Div(IArg::Int_CollectionOfInt(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -341,9 +339,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::Div(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::Div(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -358,9 +355,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::Div(OrdType::new(
-                    self_id,
-                    C_I,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_I),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::GreaterThan(IArg::Int_Int(ref a, ref b))) => {
@@ -375,9 +371,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::GreaterThan(OrdType::new(
-                    self_id,
-                    B,
-                    s_v![(*a, I), (*b, I)],
+                    (self_id, B),
+                    s_v![[_;2]; (*a, I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::GreaterThan(IArg::Int_CollectionOfInt(ref a, ref b))) => {
@@ -392,9 +387,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::GreaterThan(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::GreaterThan(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -409,9 +403,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::GreaterThan(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::LessThan(IArg::Int_Int(ref a, ref b))) => {
@@ -426,9 +419,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::LessThan(OrdType::new(
-                    self_id,
-                    B,
-                    s_v![(*a, I), (*b, I)],
+                    (self_id, B),
+                    s_v![[_;2]; (*a, I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::LessThan(IArg::Int_CollectionOfInt(ref a, ref b))) => {
@@ -443,9 +435,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::LessThan(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::LessThan(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -460,9 +451,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::LessThan(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::LessThanEqual(IArg::Int_Int(ref a, ref b))) => {
@@ -477,9 +467,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::LessThanEqual(OrdType::new(
-                    self_id,
-                    B,
-                    s_v![(*a, I), (*b, I)],
+                    (self_id, B),
+                    s_v![[_;2]; (*a, I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::LessThanEqual(IArg::Int_CollectionOfInt(ref a, ref b))) => {
@@ -494,9 +483,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::LessThanEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::LessThanEqual(IArg::CollectionOfInt_Int(ref a, ref b))) => {
@@ -511,9 +499,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::LessThanEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::GreaterThanEqual(IArg::Int_Int(ref a, ref b))) => {
@@ -528,9 +515,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::GreaterThanEqual(OrdType::new(
-                    self_id,
-                    B,
-                    s_v![(*a, I), (*b, I)],
+                    (self_id, B),
+                    s_v![[_;2]; (*a, I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::GreaterThanEqual(IArg::Int_CollectionOfInt(
@@ -548,9 +534,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::GreaterThanEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::GreaterThanEqual(IArg::CollectionOfInt_Int(
@@ -568,9 +553,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::GreaterThanEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::Equal(BI::Int(IArg::Int_Int(ref a, ref b)))) => {
@@ -584,7 +568,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, I);
 
-                OrderedExpression::Op(Op::Equal(OrdType::new(self_id, B, s_v![(*a, I), (*b, I)])))
+                OrderedExpression::Op(Op::Equal(OrdType::new(
+                    (self_id, B),
+                    s_v![[_;2]; (*a, I), (*b, I)],
+                )))
             }
             InlinedExpression::Op(IOp::Equal(BI::Int(IArg::Int_CollectionOfInt(ref a, ref b)))) => {
                 // ensure `a` is inserted
@@ -598,9 +585,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::Equal(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::Equal(BI::Int(IArg::CollectionOfInt_Int(ref a, ref b)))) => {
@@ -615,9 +601,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::Equal(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::Equal(BI::Bool(BArg::Bool_Bool(ref a, ref b)))) => {
@@ -631,7 +616,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, B);
 
-                OrderedExpression::Op(Op::Equal(OrdType::new(self_id, B, s_v![(*a, B), (*b, B)])))
+                OrderedExpression::Op(Op::Equal(OrdType::new(
+                    (self_id, B),
+                    s_v![[_;2]; (*a, B), (*b, B)],
+                )))
             }
             InlinedExpression::Op(IOp::Equal(BI::Bool(BArg::Bool_CollectionOfBool(
                 ref a,
@@ -648,9 +636,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_B);
 
                 OrderedExpression::Op(Op::Equal(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, B), (*b, C_B)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, B), (*b, C_B)],
                 )))
             }
             InlinedExpression::Op(IOp::Equal(BI::Bool(BArg::CollectionOfBool_Bool(
@@ -668,9 +655,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, B);
 
                 OrderedExpression::Op(Op::Equal(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_B), (*b, B)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
                 )))
             }
             InlinedExpression::Op(IOp::NotEqual(BI::Int(IArg::Int_Int(ref a, ref b)))) => {
@@ -685,9 +671,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::NotEqual(OrdType::new(
-                    self_id,
-                    B,
-                    s_v![(*a, I), (*b, I)],
+                    (self_id, B),
+                    s_v![[_;2]; (*a, I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::NotEqual(BI::Int(IArg::Int_CollectionOfInt(
@@ -705,9 +690,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_I);
 
                 OrderedExpression::Op(Op::NotEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, I), (*b, C_I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, I), (*b, C_I)],
                 )))
             }
             InlinedExpression::Op(IOp::NotEqual(BI::Int(IArg::CollectionOfInt_Int(
@@ -725,9 +709,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, I);
 
                 OrderedExpression::Op(Op::NotEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_I), (*b, I)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_I), (*b, I)],
                 )))
             }
             InlinedExpression::Op(IOp::NotEqual(BI::Bool(BArg::Bool_Bool(ref a, ref b)))) => {
@@ -742,9 +725,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, B);
 
                 OrderedExpression::Op(Op::NotEqual(OrdType::new(
-                    self_id,
-                    B,
-                    s_v![(*a, B), (*b, B)],
+                    (self_id, B),
+                    s_v![[_;2]; (*a, B), (*b, B)],
                 )))
             }
             InlinedExpression::Op(IOp::NotEqual(BI::Bool(BArg::Bool_CollectionOfBool(
@@ -762,9 +744,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_B);
 
                 OrderedExpression::Op(Op::NotEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, B), (*b, C_B)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, B), (*b, C_B)],
                 )))
             }
             InlinedExpression::Op(IOp::NotEqual(BI::Bool(BArg::CollectionOfBool_Bool(
@@ -782,9 +763,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, B);
 
                 OrderedExpression::Op(Op::NotEqual(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_B), (*b, B)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
                 )))
             }
             InlinedExpression::Op(IOp::And(BArg::Bool_Bool(ref a, ref b))) => {
@@ -798,7 +778,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, B);
 
-                OrderedExpression::Op(Op::And(OrdType::new(self_id, B, s_v![(*a, C_B), (*b, B)])))
+                OrderedExpression::Op(Op::And(OrdType::new(
+                    (self_id, B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
+                )))
             }
             InlinedExpression::Op(IOp::And(BArg::Bool_CollectionOfBool(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -812,9 +795,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, C_B);
 
                 OrderedExpression::Op(Op::And(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_B), (*b, B)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
                 )))
             }
             InlinedExpression::Op(IOp::And(BArg::CollectionOfBool_Bool(ref a, ref b))) => {
@@ -829,9 +811,8 @@ impl OrderedExpression {
                 new_coll.set_expr_sink(b, self_id, B);
 
                 OrderedExpression::Op(Op::And(OrdType::new(
-                    self_id,
-                    C_B,
-                    s_v![(*a, C_B), (*b, B)],
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
                 )))
             }
             InlinedExpression::Op(IOp::Or(BArg::Bool_Bool(ref a, ref b))) => {
@@ -845,7 +826,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, B);
 
-                OrderedExpression::Op(Op::Or(OrdType::new(self_id, B, s_v![(*a, C_B), (*b, B)])))
+                OrderedExpression::Op(Op::Or(OrdType::new(
+                    (self_id, B),
+                    s_v![[_;2];(*a, C_B), (*b, B)],
+                )))
             }
             InlinedExpression::Op(IOp::Or(BArg::Bool_CollectionOfBool(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -858,7 +842,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, C_B);
 
-                OrderedExpression::Op(Op::Or(OrdType::new(self_id, C_B, s_v![(*a, C_B), (*b, B)])))
+                OrderedExpression::Op(Op::Or(OrdType::new(
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
+                )))
             }
             InlinedExpression::Op(IOp::Or(BArg::CollectionOfBool_Bool(ref a, ref b))) => {
                 // ensure `a` is inserted
@@ -871,7 +858,10 @@ impl OrderedExpression {
                 OrderedExpression::new(old_arg_b, old_coll, new_coll);
                 new_coll.set_expr_sink(b, self_id, B);
 
-                OrderedExpression::Op(Op::Or(OrdType::new(self_id, C_B, s_v![(*a, C_B), (*b, B)])))
+                OrderedExpression::Op(Op::Or(OrdType::new(
+                    (self_id, C_B),
+                    s_v![[_;2]; (*a, C_B), (*b, B)],
+                )))
             }
         };
         // insert the new item
@@ -881,13 +871,26 @@ impl OrderedExpression {
 impl PartialEq<TypeData> for OrderedExpression {
     #[inline(always)]
     fn eq(&self, other: &TypeData) -> bool {
-        self.as_ref().eq(other)
+        self.get_kind().eq(other)
     }
 }
+impl AsRef<Match> for OrderedExpression {
+    #[inline(always)]
+    fn as_ref<'a>(&'a self) -> &'a Match {
+        match self {
+            &OrderedExpression::Final(ref o) => o.as_ref(),
+            &OrderedExpression::StdLib(ref s) => s.as_ref(),
+            &OrderedExpression::Constant(ref c) => c.as_ref(),
+            &OrderedExpression::Op(ref o) => o.as_ref(),
+        }
+    }
+}
+impl MatchTrait for OrderedExpression {}
 impl AsRef<OrdType> for OrderedExpression {
     #[inline(always)]
     fn as_ref<'a>(&'a self) -> &'a OrdType {
         match self {
+            &OrderedExpression::Final(ref o) => o,
             &OrderedExpression::StdLib(ref s) => s.as_ref(),
             &OrderedExpression::Constant(ref c) => c.as_ref(),
             &OrderedExpression::Op(ref o) => o.as_ref(),
@@ -898,6 +901,7 @@ impl AsMut<OrdType> for OrderedExpression {
     #[inline(always)]
     fn as_mut<'a>(&'a mut self) -> &'a mut OrdType {
         match self {
+            &mut OrderedExpression::Final(ref mut o) => o,
             &mut OrderedExpression::StdLib(ref mut s) => s.as_mut(),
             &mut OrderedExpression::Constant(ref mut c) => c.as_mut(),
             &mut OrderedExpression::Op(ref mut o) => o.as_mut(),
@@ -912,6 +916,15 @@ pub enum ConstantValue {
     Bool(bool, OrdType),
     Int(i8, OrdType),
 }
+impl AsRef<Match> for ConstantValue {
+    #[inline(always)]
+    fn as_ref<'a>(&'a self) -> &'a Match {
+        match self {
+            &ConstantValue::Bool(_, ref x) | &ConstantValue::Int(_, ref x) => x.as_ref(),
+        }
+    }
+}
+impl MatchTrait for ConstantValue {}
 impl AsRef<OrdType> for ConstantValue {
     #[inline(always)]
     fn as_ref<'a>(&'a self) -> &'a OrdType {
@@ -933,7 +946,7 @@ impl AsMut<OrdType> for ConstantValue {
 impl PartialEq<TypeData> for ConstantValue {
     #[inline(always)]
     fn eq(&self, other: &TypeData) -> bool {
-        self.as_ref().eq(other)
+        self.get_kind().eq(other)
     }
 }
 impl OrdTrait for ConstantValue {}
@@ -951,6 +964,23 @@ pub enum StdLibraryFunc {
     Max(OrdType),
     Min(OrdType),
 }
+impl AsRef<Match> for StdLibraryFunc {
+    #[inline(always)]
+    fn as_ref<'a>(&'a self) -> &'a Match {
+        match self {
+            &StdLibraryFunc::D6(ref x)
+            | &StdLibraryFunc::D3(ref x)
+            | &StdLibraryFunc::Filter(ref x)
+            | &StdLibraryFunc::Count(ref x)
+            | &StdLibraryFunc::Len(ref x)
+            | &StdLibraryFunc::Join(ref x)
+            | &StdLibraryFunc::Sum(ref x)
+            | &StdLibraryFunc::Max(ref x)
+            | &StdLibraryFunc::Min(ref x) => x.as_ref(),
+        }
+    }
+}
+impl MatchTrait for StdLibraryFunc {}
 impl AsRef<OrdType> for StdLibraryFunc {
     #[inline(always)]
     fn as_ref<'a>(&'a self) -> &'a OrdType {
@@ -986,7 +1016,7 @@ impl AsMut<OrdType> for StdLibraryFunc {
 impl PartialEq<TypeData> for StdLibraryFunc {
     #[inline(always)]
     fn eq(&self, other: &TypeData) -> bool {
-        self.as_ref().eq(other)
+        self.get_kind().eq(other)
     }
 }
 impl OrdTrait for StdLibraryFunc {}
@@ -1006,6 +1036,26 @@ pub enum Op {
     Or(OrdType),
     And(OrdType),
 }
+impl AsRef<Match> for Op {
+    #[inline(always)]
+    fn as_ref<'a>(&'a self) -> &'a Match {
+        match self {
+            &Op::Add(ref x)
+            | &Op::Sub(ref x)
+            | &Op::Mul(ref x)
+            | &Op::Div(ref x)
+            | &Op::Equal(ref x)
+            | &Op::NotEqual(ref x)
+            | &Op::GreaterThan(ref x)
+            | &Op::GreaterThanEqual(ref x)
+            | &Op::LessThan(ref x)
+            | &Op::LessThanEqual(ref x)
+            | &Op::Or(ref x)
+            | &Op::And(ref x) => x.as_ref(),
+        }
+    }
+}
+impl MatchTrait for Op {}
 impl AsRef<OrdType> for Op {
     #[inline(always)]
     fn as_ref<'a>(&'a self) -> &'a OrdType {
@@ -1047,7 +1097,7 @@ impl AsMut<OrdType> for Op {
 impl PartialEq<TypeData> for Op {
     #[inline(always)]
     fn eq(&self, other: &TypeData) -> bool {
-        self.as_ref().eq(other)
+        self.get_kind().eq(other)
     }
 }
 impl OrdTrait for Op {}

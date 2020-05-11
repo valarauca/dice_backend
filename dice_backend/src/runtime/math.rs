@@ -91,6 +91,16 @@ fn test_dice_roll() {
             sides: 6,
             output: Ratio::new(1, 6),
         },
+        /*
+         * All tests for 2 d6
+         *
+         */
+        TestSet {
+            expected: 1,
+            num: 2,
+            sides: 6,
+            output: Ratio::new(0, 36),
+        },
     ];
 
     for test in tests {

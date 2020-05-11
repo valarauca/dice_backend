@@ -43,6 +43,14 @@ macro_rules! _unreachable_panic {
 /// restrictions & constraints it requires.
 #[macro_export]
 macro_rules! s_v {
+    ($kind: ty; $($arg:expr),* $(,)*) => {
+        {
+            #[allow(unused_mut)]
+            let mut v = ::smallvec::SmallVec::<$kind>::new();
+            $(v.push($arg);)*
+            v
+        }
+    };
     ($($arg:expr),* $(,)*) => {
         {
             #[allow(unused_mut)]

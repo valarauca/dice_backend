@@ -4,10 +4,7 @@ use std::ops::Index;
 use super::super::inliner::InlinedCollection;
 use super::super::parser_output::TypeData;
 
-use super::super::peephole::graphs::{Graph, Match};
-
-use super::expr::OrderedExpression;
-use super::ord::{OrdTrait, OrdType};
+use super::{Graph, Match, MatchTrait, OrdTrait, OrdType, OrderedExpression};
 
 /// OrderedCollection is the read-only collection of statements
 #[derive(Clone)]
@@ -25,11 +22,20 @@ impl OrderedCollection {
         let ret = old_coll.get_expr(&ret_id).unwrap();
 
         // recursively walk the AST to build sources & sinks.
-        OrderedExpression::new(ret, old_coll, &mut new_coll);
+        //OrderedExpression::new(ret, old_coll, &mut new_coll);
+
+        // set up the special expression which contains our `Final` statement.
+        let return_type = new_coll.get_expr(&ret_id).unwrap().get_kind();
+        let final_id = new_coll.next_free_id();
+        let end = OrderedExpression::Final(OrdType::new(
+            (final_id, return_type),
+            Some((ret_id, return_type)),
+        ));
+        new_coll.insert(end);
 
         OrderedCollection {
             data: new_coll.data,
-            ret: ret_id,
+            ret: final_id,
         }
     }
 
@@ -46,7 +52,7 @@ impl OrderedCollection {
         self.data.get_mut(&expr)
     }
 
-    pub fn remove_expr(&mut self, expr: u64) {
+    fn remove_expr(&mut self, expr: u64) {
         self.data.remove(&expr);
     }
 
@@ -77,20 +83,12 @@ impl OrderedCollection {
         }
         panic!("ZOMG");
     }
-
-    // stupid function to work around the borrow checker
-    fn exists(&self, id: u64, kind: TypeData) -> bool {
-        match self.get_expr(id) {
-            Option::Some(expr) if expr.as_ref() == kind => true,
-            _ => false,
-        }
-    }
 }
 impl Graph for OrderedCollection {
     type Expr = OrderedExpression;
 
-    fn insert(&mut self, expr: OrderedExpression) {
-        match self.data.insert(expr.get_own_id(), expr) {
+    fn insert(&mut self, expr: Self::Expr) {
+        match self.data.insert(expr.get_id(), expr) {
             Option::Some(_) => {
                 panic!("insert cannot collide");
             }
@@ -98,87 +96,68 @@ impl Graph for OrderedCollection {
         };
     }
 
-    fn add_sink(&mut self, expr: &Match, new_sink: &Match) {
-        match expr
-            .get_id()
-            .into_iter()
-            .zip(expr.get_kind())
-            .zip(new_sink.get_id())
-            .zip(new_sink.get_kind())
-            .filter(|tup| self.exists(((tup.0).0).0, ((tup.0).0).1))
-            .map(|(((expr_id, _), sink_id), sink_kind)| (expr_id, sink_id, sink_kind))
-            .next()
-        {
-            Option::None => {}
-            Option::Some((expr_id, sink_id, sink_kind)) => {
-                // the exists check proves that it exists & is the right type
-                self.get_mut_expr(expr_id)
-                    .unwrap()
-                    .add_sink(sink_id, sink_kind);
+    fn add_sink<A, B>(&mut self, expr: &A, new_sink: &B)
+    where
+        A: MatchTrait,
+        B: MatchTrait + Clone,
+    {
+        match self.get_mut_expr(expr.get_id()) {
+            Option::None => {
+                _unreachable_panic!();
             }
-        };
+            Option::Some(arg) => {
+                debug_assert_eq!(expr.get_kind(), arg.get_kind());
+                arg.add_sink(new_sink);
+            }
+        }
     }
 
-    fn remove_sink(&mut self, expr: &Match, new_sink: &Match) {
-        match expr
-            .get_id()
-            .into_iter()
-            .zip(expr.get_kind())
-            .zip(new_sink.get_id())
-            .zip(new_sink.get_kind())
-            .filter(|tup| self.exists(((tup.0).0).0, ((tup.0).0).1))
-            .map(|(((expr_id, _), sink_id), sink_kind)| (expr_id, sink_id, sink_kind))
-            .next()
-        {
-            Option::None => {}
-            Option::Some((expr_id, sink_id, sink_kind)) => {
-                // the exists check proves that it exists & is the right type
-                self.get_mut_expr(expr_id)
-                    .unwrap()
-                    .remove_sink(sink_id, sink_kind);
+    fn remove_sink<A, B>(&mut self, expr: &A, new_sink: &B)
+    where
+        A: MatchTrait,
+        B: MatchTrait,
+    {
+        match self.get_mut_expr(expr.get_id()) {
+            Option::None => {
+                _unreachable_panic!();
             }
-        };
+            Option::Some(arg) => {
+                debug_assert_eq!(expr.get_kind(), arg.get_kind());
+                arg.remove_sink(new_sink);
+            }
+        }
     }
 
-    fn compare_and_swap_source(&mut self, expr: &Match, old: &Match, new: &Match) {
-        // update a source
-        match expr
-            .get_id()
-            .into_iter()
-            .zip(expr.get_kind())
-            .zip(old.get_id().into_iter().zip(old.get_kind()))
-            .zip(new.get_id().into_iter().zip(new.get_kind()))
-            .filter(|tup| self.exists(((tup.0).0).0, ((tup.0).0).1))
-            .map(|(((expr_id, _), (old_id, old_kind)), (new_id, new_kind))| {
-                (expr_id, old_id, old_kind, new_id, new_kind)
-            })
-            .next()
-        {
-            Option::Some((expr_id, old_id, old_kind, new_id, new_kind)) => {
-                self.get_mut_expr(expr_id)
-                    .unwrap()
-                    .cas_source(old_id, old_kind, new_id, new_kind);
+    fn compare_and_swap_source<A, B, C>(&mut self, expr: &A, old: &B, new: &C)
+    where
+        A: MatchTrait,
+        B: MatchTrait + Clone,
+        C: MatchTrait + Clone,
+    {
+        match self.get_mut_expr(expr.get_id()) {
+            Option::None => {
+                _unreachable_panic!();
             }
-            _ => {}
-        };
-
-        // possible update the return statement
-        // avoid the `expr`
-        match old.get_id().into_iter().zip(new.get_id()).next() {
-            Option::Some((old_id, new_id)) if self.ret == old_id => {
-                self.ret = new_id;
+            Option::Some(arg) => {
+                debug_assert_eq!(expr.get_kind(), arg.get_kind());
+                arg.cas_source(old, new);
             }
-            _ => {}
-        };
+        }
     }
 
-    fn remove_expr(&mut self, expr: &Match) {
-        match expr.get_id() {
-            Option::Some(id) => {
-                self.remove_expr(id);
+    fn remove_expr<A>(&mut self, expr: &A)
+    where
+        A: MatchTrait,
+    {
+        match self.get_expr(expr.get_id()) {
+            Option::None => {
+                _unreachable_panic!();
             }
-            _ => {}
+            Option::Some(arg) => {
+                debug_assert_eq!(expr.get_kind(), arg.get_kind());
+            }
         };
+        self.remove_expr(expr.get_id());
     }
 }
 
@@ -195,7 +174,7 @@ impl OrderingCollection {
 
     /// attempt to insert something into the collection
     pub fn insert(&mut self, arg: OrderedExpression) {
-        let own_id = arg.get_own_id();
+        let own_id = arg.get_id();
         if !self.contains(&own_id) {
             self.data.insert(own_id, arg);
         }
@@ -215,7 +194,8 @@ impl OrderingCollection {
     ) {
         #[allow(unused_mut)]
         let mut expr = self.get_mut_expr(expr_to_modify).unwrap();
-        expr.add_sink(sink_expr_id, sink_expr_expected_type);
+        let m = Match::from((sink_expr_id, sink_expr_expected_type));
+        expr.add_sink(&m);
     }
 
     /// mutable lookup
@@ -223,7 +203,7 @@ impl OrderingCollection {
         self.data.get_mut(arg)
     }
 
-    pub fn next_free_id(&self) -> u64 {
+    fn next_free_id(&self) -> u64 {
         for i in 0..u64::MAX {
             if self.data.get(&i).is_none() {
                 return i;
