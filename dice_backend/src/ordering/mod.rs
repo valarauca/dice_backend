@@ -6,9 +6,13 @@ mod expr;
 pub use self::expr::{ConstantValue, Op, OrderedExpression, StdLibraryFunc};
 mod graphs;
 pub use self::graphs::{
-    AddSink, Graph, Inserter, ModifyGraph, Operation, RemoveSink, Remover, SwapSource,
+    AddSink, Graph, Inserter, Modifications, ModifyGraph, Operation, RemoveSink, Remover,
+    SwapSource,
 };
 mod coll;
+pub use self::coll::OrderedCollection;
+
+mod holes;
 
 /*
 #[cfg(test)]

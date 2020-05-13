@@ -1,5 +1,7 @@
 use super::super::parser_output::TypeData;
 
+use super::{OrdTrait, OrdType};
+
 /// Match is our core type used to identify "things to change"
 /// it basically gives an expression id `u64` and a `TypeData`
 /// which should uniquely identify an expression within the
@@ -80,6 +82,46 @@ impl PartialEq<u64> for &Match {
     }
 }
 
+impl From<OrdType> for Match {
+    #[inline(always)]
+    fn from(arg: OrdType) -> Match {
+        let id = arg.get_id();
+        let kind = arg.get_kind();
+        Self { id, kind }
+    }
+}
+/*
+impl From<&OrdType> for Match {
+    #[inline(always)]
+    fn from(arg: &OrdType) -> Match {
+        let id = arg.get_id();
+        let kind = arg.get_kind();
+        Self { id, kind }
+    }
+}
+*/
+impl<T: OrdTrait> From<&T> for Match {
+    #[inline(always)]
+    fn from(arg: &T) -> Match {
+        let id = arg.get_id();
+        let kind = arg.get_kind();
+        Self { id, kind }
+    }
+}
+/*
+impl From<Match> for Match {
+    #[inline(always)]
+    fn from(arg: Match) -> Match {
+        arg
+    }
+}
+impl From<&Match> for Match {
+    #[inline(always)]
+    fn from(arg: &Match) -> Match {
+        arg.clone()
+    }
+}
+*/
 impl From<&&(u64, TypeData)> for Match {
     #[inline(always)]
     fn from(arg: &&(u64, TypeData)) -> Self {

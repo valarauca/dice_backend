@@ -1,7 +1,10 @@
 use super::super::itertools::Itertools;
-use super::super::ordering::{OrdTrait, OrdType, OrderedCollection, OrderedExpression};
 use super::super::parser_output::TypeData;
-use super::graphs::{Modifications, ModifyGraph};
+
+use super::{
+    AddSink, Graph, Inserter, Match, MatchTrait, Modifications, ModifyGraph, Operation, OrdTrait,
+    OrdType, OrderedCollection, OrderedExpression, RemoveSink, Remover, SwapSource,
+};
 
 pub mod inline_add;
 pub mod inline_and;
@@ -61,35 +64,32 @@ where
     B: OrdTrait,
     C: OrdTrait,
 {
-    use super::graphs::{Match, Modifications, RemoveSink, Remover, SwapSource};
+    let root_m: Match = Match::from(root);
+    let x_args_m: Match = Match::from(x_args);
+    let y_args_m: Match = Match::from(y_args);
 
     let mut mods = Modifications::default();
-    let mut new_constant = OrdType::new(new_id, kind, s_v![]);
+    let mut new_constant: OrdType = OrdType::new((new_id, kind), Option::<Match>::None);
 
     // where ever we sink the result of the add,
     // we need to sink the result of the new constant
     for sink in root.get_sinks() {
-        mods.push(SwapSource::new(
-            sink,
-            root.get_matcher_tuple(),
-            new_constant.get_matcher_tuple(),
+        mods.push(SwapSource::new::<_, _, _>(
+            *sink,
+            root_m,
+            new_constant.clone(),
         ));
-        new_constant.add_sink(sink.0, kind);
+        new_constant.add_sink(sink);
     }
-    mods.push(SwapSource::new(
-        Match::default(),
-        root.get_matcher_tuple(),
-        new_constant.get_matcher_tuple(),
-    ));
 
     // determine if we can drop our sink?
-    mods.push(RemoveSink::new(x_args, root));
+    mods.push(RemoveSink::new(x_args_m, root_m));
     if x_args.get_sinks().len() == 1 {
-        mods.push(Remover::new(x_args));
+        mods.push(Remover::new(x_args_m));
     }
-    mods.push(RemoveSink::new(y_args, root));
+    mods.push(RemoveSink::new(y_args_m, root_m));
     if y_args.get_sinks().len() == 1 {
-        mods.push(Remover::new(y_args));
+        mods.push(Remover::new(y_args_m));
     }
 
     (new_constant, mods)

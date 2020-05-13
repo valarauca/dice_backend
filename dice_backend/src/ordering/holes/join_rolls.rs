@@ -2,6 +2,7 @@ use super::super::super::ordering::*;
 use super::super::super::parser_output::TypeData;
 
 use super::super::graphs::*;
+use super::super::matcher::*;
 
 pub fn join_roll(expr: u64, coll: &OrderedCollection) -> Option<Modifications<OrderedExpression>> {
     // check that this is in fact a join expression
@@ -15,8 +16,8 @@ pub fn join_roll(expr: u64, coll: &OrderedCollection) -> Option<Modifications<Or
     };
 
     let (left, right, expect) = match (
-        coll.get_expr(join_op.get_sources()[0].0).unwrap(),
-        coll.get_expr(join_op.get_sources()[1].0).unwrap(),
+        coll.get_expr(join_op.get_sources()[0].get_id()).unwrap(),
+        coll.get_expr(join_op.get_sources()[1].get_id()).unwrap(),
     ) {
         // source code is roughly `join(roll_d6(_),roll_d6(_))`
         (
@@ -34,8 +35,8 @@ pub fn join_roll(expr: u64, coll: &OrderedCollection) -> Option<Modifications<Or
 
     // now inspect the arguments of the `roll_d3(_)` or `roll_d6(_)` calls.
     match (
-        coll.get_expr(left.get_sources()[0].0).unwrap(),
-        coll.get_expr(right.get_sources()[0].0).unwrap(),
+        coll.get_expr(left.get_sources()[0].get_id()).unwrap(),
+        coll.get_expr(right.get_sources()[0].get_id()).unwrap(),
     ) {
         (
             OrderedExpression::Constant(ConstantValue::Int(ref l_val, ref l_args)),
@@ -97,30 +98,25 @@ where
     let mut mods = Modifications::default();
 
     // create our new constant
-    let mut new_const = OrdType::new(new_const_id, TypeData::Int, s_v![]);
+    let mut new_const = OrdType::new((new_const_id, TypeData::Int), Option::<Match>::None);
     // create or new roll invocation
     let mut new_roll = OrdType::new(
-        new_roll_id,
-        TypeData::CollectionOfInt,
-        s_v![(new_const_id, TypeData::Int)],
+        (new_roll_id, TypeData::CollectionOfInt),
+        s_v![[_;1]; (new_const_id, TypeData::Int)],
     );
-    new_const.add_sink(new_roll.get_own_id(), TypeData::Int);
+    new_const.add_sink(&new_roll);
 
     // for every `join(_,_)`'s result flows, we need to update that.
-    for sink in join_op.get_sinks() {
-        mods.push(SwapSource::new(
-            sink,
-            join_op.get_matcher_tuple(),
-            new_roll.get_matcher_tuple(),
+    let array: &[Match] = join_op.get_sinks();
+    for sink in array {
+        let sink_m: Match = sink.clone();
+        mods.push(SwapSource::new::<Match, &A, OrdType>(
+            sink_m,
+            join_op,
+            new_roll.clone(),
         ));
-        new_roll.add_sink(sink.0, sink.1);
+        new_roll.add_sink(&sink_m);
     }
-    // handle if we have some `analyze join(_,_)`
-    mods.push(SwapSource::new(
-        Match::default(),
-        join_op.get_matcher_tuple(),
-        new_roll.get_matcher_tuple(),
-    ));
 
     // remove the join operation itself
     mods.push(Remover::new(join_op));

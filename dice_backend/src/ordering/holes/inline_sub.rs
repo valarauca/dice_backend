@@ -19,8 +19,8 @@ pub fn sub_inline(expr: u64, coll: &OrderedCollection) -> Option<Modifications<O
 
     // both arguments must be a constant
     match (
-        coll.get_expr(sub_op.get_sources()[0].0),
-        coll.get_expr(sub_op.get_sources()[1].0),
+        coll.get_expr(sub_op.get_sources()[0].get_id()),
+        coll.get_expr(sub_op.get_sources()[1].get_id()),
     ) {
         (
             Option::Some(OrderedExpression::Constant(ConstantValue::Int(ref x, ref x_args))),

@@ -12,14 +12,14 @@ pub fn len_dice(expr: u64, coll: &OrderedCollection) -> Option<Modifications<Ord
     };
 
     // ensure we have something like `len(roll_d6(_))` or `len(roll_d3(_))`
-    let roll_op = match coll.get_expr(len_op.get_sources()[0].0).unwrap() {
+    let roll_op = match coll.get_expr(len_op.get_sources()[0].get_id()).unwrap() {
         OrderedExpression::StdLib(StdLibraryFunc::D6(ref roll)) => roll,
         OrderedExpression::StdLib(StdLibraryFunc::D3(ref roll)) => roll,
         _ => return None,
     };
 
     // ensure the `roll_d6(_)` or `roll_d3(_)` point to a constant
-    let count_args = match coll.get_expr(roll_op.get_sources()[0].0).unwrap() {
+    let count_args = match coll.get_expr(roll_op.get_sources()[0].get_id()).unwrap() {
         OrderedExpression::Constant(ConstantValue::Int(_, ref count_args)) => count_args,
         _ => return None,
     };
@@ -28,8 +28,8 @@ pub fn len_dice(expr: u64, coll: &OrderedCollection) -> Option<Modifications<Ord
     mods.push(SwapSource::new(Match::default(), len_op, count_args));
     // where ever `len_op` flowed into, we can replace it with the constant
     for sink in len_op.get_sinks() {
-        mods.push(SwapSource::new(sink, len_op, count_args));
-        mods.push(AddSink::new(count_args, sink));
+        mods.push(SwapSource::new(*sink, len_op, count_args));
+        mods.push(AddSink::new(count_args, *sink));
     }
     // special case for return value
 
@@ -52,7 +52,7 @@ pub fn len_dice(expr: u64, coll: &OrderedCollection) -> Option<Modifications<Ord
     let mut mods = Modifications::default();
     match coll.get_expr(expr) {
         Option::Some(OrderedExpression::StdLib(StdLibraryFunc::Len(ref len))) => {
-            let source = len.get_sources()[0].0;
+            let source = len.get_sources()[0].get_id();
             match coll.get_expr(source) {
                 Option::Some(OrderedExpression::StdLib(StdLibraryFunc::D6(ref d6))) => {
                     // we are the only reader, which means our optimization is safe
