@@ -49,7 +49,9 @@ pub fn build_report<'a>(coll: &'a InlinedCollection) -> Report {
     lambda_builder_recursive(&mut resolved, coll, ret);
 
     let mut stack = Vec::<Iter>::new();
-    builder_recursive(&mut resolved, coll, ret, &mut stack).collect()
+    builder_recursive(&mut resolved, coll, ret, &mut stack)
+        .into_iter()
+        .collect()
 }
 
 fn builder_recursive<'a>(

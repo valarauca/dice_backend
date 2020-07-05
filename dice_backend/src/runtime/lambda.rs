@@ -1,16 +1,17 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
+use std::sync::Arc;
 
 use super::super::inliner::{BoolArg, BoolOrInt, IntArg, Op};
 use super::super::itertools::Itertools;
 use super::super::smallvec::SmallVec;
 
 use super::super::seahasher::DefaultSeaHasher;
-use super::{BoolVec, Datum, Dice3, Dice6, Element, IntVec, Rational};
+use super::{BoolVec, Datum, Dice3, Dice6, Element, ElementVec, IntVec, Rational};
 
 /// Iter is an iterator of elements
-pub type Iter = Box<dyn Iterator<Item = Element>>;
+pub type Iter = ElementVec;
 
 /*
  * Base Lambdas
@@ -168,14 +169,16 @@ pub fn from_op(arg: &Op) -> Combinator {
     match arg {
         Op::Add(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
             new_iter(
-                i1.cartesian_product(small_vec_builder(i2))
+                i1.into_iter()
+                    .cartesian_product(small_vec_builder(i2))
                     .map(int_scalar(|a, b| a + b)),
             )
         }),
         Op::Add(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_scalar(|a, b| *a += b)),
                 )
             })
@@ -183,21 +186,24 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Add(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_scalar(|a, b| *a += b)),
                 )
             })
         }
         Op::Sub(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
             new_iter(
-                i1.cartesian_product(small_vec_builder(i2))
+                i1.into_iter()
+                    .cartesian_product(small_vec_builder(i2))
                     .map(int_scalar(|a, b| a - b)),
             )
         }),
         Op::Sub(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_scalar(|a, b| *a -= b)),
                 )
             })
@@ -205,21 +211,24 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Sub(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_scalar(|a, b| *a -= b)),
                 )
             })
         }
         Op::Mul(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
             new_iter(
-                i1.cartesian_product(small_vec_builder(i2))
+                i1.into_iter()
+                    .cartesian_product(small_vec_builder(i2))
                     .map(int_scalar(|a, b| a * b)),
             )
         }),
         Op::Mul(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_scalar(|a, b| *a *= b)),
                 )
             })
@@ -227,21 +236,24 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Mul(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_scalar(|a, b| *a *= b)),
                 )
             })
         }
         Op::Div(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
             new_iter(
-                i1.cartesian_product(small_vec_builder(i2))
+                i1.into_iter()
+                    .cartesian_product(small_vec_builder(i2))
                     .map(int_scalar(|a, b| a / b)),
             )
         }),
         Op::Div(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_scalar(|a, b| *a /= b)),
                 )
             })
@@ -249,7 +261,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Div(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_scalar(|a, b| *a /= b)),
                 )
             })
@@ -257,7 +270,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::GreaterThan(IntArg::Int_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_scalar(|a, b| a > b)),
                 )
             })
@@ -265,7 +279,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::GreaterThan(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_bool(|coll, scal| scal > coll)),
                 )
             })
@@ -273,7 +288,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::GreaterThan(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_bool(|coll, scal| coll > scal)),
                 )
             })
@@ -281,7 +297,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::GreaterThanEqual(IntArg::Int_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_scalar(|a, b| a >= b)),
                 )
             })
@@ -289,7 +306,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::GreaterThanEqual(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_bool(|coll, scal| scal >= coll)),
                 )
             })
@@ -297,7 +315,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::GreaterThanEqual(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_bool(|coll, scal| coll >= scal)),
                 )
             })
@@ -305,7 +324,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::LessThan(IntArg::Int_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_scalar(|a, b| a < b)),
                 )
             })
@@ -313,7 +333,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::LessThan(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_bool(|coll, scal| scal < coll)),
                 )
             })
@@ -321,7 +342,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::LessThan(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_bool(|coll, scal| coll < scal)),
                 )
             })
@@ -329,7 +351,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::LessThanEqual(IntArg::Int_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_scalar(|a, b| a <= b)),
                 )
             })
@@ -337,7 +360,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::LessThanEqual(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_bool(|coll, scal| scal <= coll)),
                 )
             })
@@ -345,7 +369,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::LessThanEqual(IntArg::CollectionOfInt_Int(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_bool(|coll, scal| scal <= coll)),
                 )
             })
@@ -353,7 +378,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Equal(BoolOrInt::Int(IntArg::Int_Int(left, right))) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_scalar(|a, b| a == b)),
                 )
             })
@@ -361,7 +387,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Equal(BoolOrInt::Int(IntArg::Int_CollectionOfInt(left, right))) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_bool(|coll, scal| scal == coll)),
                 )
             })
@@ -369,7 +396,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Equal(BoolOrInt::Int(IntArg::CollectionOfInt_Int(left, right))) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_bool(|coll, scal| scal == coll)),
                 )
             })
@@ -380,7 +408,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::NotEqual(BoolOrInt::Int(IntArg::Int_Int(left, right))) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_scalar(|a, b| a != b)),
                 )
             })
@@ -388,7 +417,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::NotEqual(BoolOrInt::Int(IntArg::Int_CollectionOfInt(left, right))) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i2.cartesian_product(small_vec_builder(i1))
+                    i2.into_iter()
+                        .cartesian_product(small_vec_builder(i1))
                         .map(int_coll_bool(|coll, scal| scal != coll)),
                 )
             })
@@ -396,7 +426,8 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::NotEqual(BoolOrInt::Int(IntArg::CollectionOfInt_Int(left, right))) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
                 new_iter(
-                    i1.cartesian_product(small_vec_builder(i2))
+                    i1.into_iter()
+                        .cartesian_product(small_vec_builder(i2))
                         .map(int_coll_bool(|coll, scal| scal != coll)),
                 )
             })
@@ -436,7 +467,7 @@ pub fn const_int(x: i8) -> Init {
 /// standard library max
 pub fn max() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.filter_map(|e| -> Option<Element> {
+        new_iter(iter.into_iter().filter_map(|e| -> Option<Element> {
             let (datum, prob) = e.split();
             let mut dice_coll = datum.get_int_vec();
             dice_coll.sort_unstable();
@@ -453,7 +484,7 @@ pub fn max() -> Chain {
 /// standard library min
 pub fn min() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.filter_map(|e| -> Option<Element> {
+        new_iter(iter.into_iter().filter_map(|e| -> Option<Element> {
             let (datum, prob) = e.split();
             let mut dice_coll = datum.get_int_vec();
             dice_coll.sort_unstable();
@@ -468,7 +499,7 @@ pub fn min() -> Chain {
 /// standard library length operator
 pub fn len() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.map(|e| -> Element {
+        new_iter(iter.into_iter().map(|e| -> Element {
             let (datum, prob) = e.split();
             Element::new(datum.len(), prob)
         }))
@@ -478,7 +509,7 @@ pub fn len() -> Chain {
 /// stdlib count
 pub fn count() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.map(|e| -> Element {
+        new_iter(iter.into_iter().map(|e| -> Element {
             let (datum, prob) = e.split();
             let count = datum.get_bool_vec().iter().filter(|x| **x).count() as i8;
             Element::new(count, prob)
@@ -489,26 +520,30 @@ pub fn count() -> Chain {
 /// stdlib filter
 pub fn filter() -> Combinator {
     new_combin(move |i1: Iter, i2: Iter| -> Iter {
-        new_iter(i1.zip(i2).map(|(i1, i2)| -> Element {
-            let (d1, p1) = i1.split();
-            let (d2, p2) = i2.split();
-            // their source should be identical
-            assert_eq!(p1, p2);
-            let v: IntVec = d1
-                .get_bool_vec()
-                .into_iter()
-                .zip(d2.get_int_vec())
-                .filter_map(|(b, i)| if b { Some(i) } else { None })
-                .collect();
-            Element::new(v, p1)
-        }))
+        new_iter(
+            i1.into_iter()
+                .zip(i2.into_iter())
+                .map(|(i1, i2)| -> Element {
+                    let (d1, p1) = i1.split();
+                    let (d2, p2) = i2.split();
+                    // their source should be identical
+                    assert_eq!(p1, p2);
+                    let v: IntVec = d1
+                        .get_bool_vec()
+                        .into_iter()
+                        .zip(d2.get_int_vec())
+                        .filter_map(|(b, i)| if b { Some(i) } else { None })
+                        .collect();
+                    Element::new(v, p1)
+                }),
+        )
     })
 }
 
 /// stdlib sum
 pub fn sum() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.map(|e| -> Element {
+        new_iter(iter.into_iter().map(|e| -> Element {
             let (datum, prob) = e.split();
             Element::new(datum.sum(), prob)
         }))
@@ -548,6 +583,13 @@ pub fn coalesce() -> Coalesce {
 /// Method of joining 2 iterator streams
 pub fn join() -> Combinator {
     new_combin(move |i1: Iter, i2: Iter| -> Iter {
+        /*
+        let (i1,i2, cache) = match crate::runtime::cache::joiner::check(i1,i2) {
+            Ok(output) => return output,
+            Err(((i1,i2),cache)) => (i1,i2,cache)
+        };
+        */
+
         let lambda = |a: (Element, Element)| -> Element {
             let ((datum1, prob1), (datum2, prob2)) = (a.0.split(), a.1.split());
             let joined = match (datum1, datum2) {
@@ -567,13 +609,19 @@ pub fn join() -> Combinator {
             v.extend(iter);
             v
         };
-        new_iter(i1.cartesian_product(vec_builder(i2)).map(lambda))
+        let output = new_iter(
+            i1.into_iter()
+                .cartesian_product(vec_builder(i2))
+                .map(lambda),
+        );
+        //crate::runtime::cache::joiner::insert(cache, &output);
+        output
     })
 }
 
 pub fn d3() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.flat_map(|e| {
+        new_iter(iter.into_iter().flat_map(|e| {
             let (datum, prob) = e.split();
             // this will panic if the type checker failes
             roll_dice3(datum.get_int() as usize, prob)
@@ -583,7 +631,7 @@ pub fn d3() -> Chain {
 
 pub fn d6() -> Chain {
     new_chain(move |iter: Iter| -> Iter {
-        new_iter(iter.flat_map(|e| {
+        new_iter(iter.into_iter().flat_map(|e| {
             let (datum, prob) = e.split();
             // this will panic if the type checker failes
             roll_dice6(datum.get_int() as usize, prob)
@@ -598,6 +646,12 @@ pub fn d6() -> Chain {
 
 /// generate a specific number of `dice3` rolles
 fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
+    /*
+    match crate::runtime::cache::dice6::check_value((num, base_prob)) {
+        Option::Some(item) => return item,
+        _ => {}
+    };
+    */
     // lambda for the base case (rolling 1 dice)
     let lambda =
         move |x: i8| -> Element { Element::new([x], base_prob / Rational::from_integer(6)) };
@@ -610,7 +664,7 @@ fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
         Element::new(datum, prob / Rational::from_integer(6))
     };
 
-    match num {
+    let output = match num {
         0 => {
             // zero need to avoid recursion
             new_iter(None)
@@ -625,14 +679,24 @@ fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
             // do recursive stuff for values > 2
             new_iter(
                 roll_dice6(num - 1, base_prob)
+                    .into_iter()
                     .cartesian_product(Dice6::new().into_iter())
                     .map(joiner),
             )
         }
-    }
+    };
+    //crate::runtime::cache::dice6::insert_value((num, base_prob), output.clone());
+    output
 }
 /// generate a specific number of `dice3` rolles
 fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
+    /*
+    match crate::runtime::cache::dice3::check_value((num, base_prob)) {
+        Option::Some(arg) => return arg,
+        _ => {}
+    };
+    */
+
     // lambda for the base case (rolling 1 dice)
     let lambda =
         move |x: i8| -> Element { Element::new([x], base_prob / Rational::from_integer(3)) };
@@ -645,7 +709,7 @@ fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
         Element::new(datum, prob / Rational::from_integer(3))
     };
 
-    match num {
+    let output = match num {
         0 => {
             // zero need to avoid recursion
             new_iter(None)
@@ -660,11 +724,14 @@ fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
             // do recursive stuff for values > 2
             new_iter(
                 roll_dice3(num - 1, base_prob)
+                    .into_iter()
                     .cartesian_product(Dice3::new().into_iter())
                     .map(joiner),
             )
         }
-    }
+    };
+    //crate::runtime::cache::dice3::insert_value((num, base_prob), output.clone());
+    output
 }
 
 /*
@@ -698,7 +765,7 @@ fn new_iter<I>(arg: I) -> Iter
 where
     I: IntoIterator<Item = Element> + 'static,
 {
-    Box::new(arg.into_iter())
+    ElementVec::new(arg)
 }
 
 /*
@@ -711,7 +778,16 @@ fn new_chain<F>(arg: F) -> Chain
 where
     F: Fn(Iter) -> Iter + 'static,
 {
-    Box::new(arg)
+    Box::new(move |i1: Iter| -> Iter {
+        match crate::runtime::cache::chain::check::<F>(i1) {
+            Ok(output) => output,
+            Err((i1, cache)) => {
+                let output = arg(i1);
+                crate::runtime::cache::chain::insert::<F>(cache, &output);
+                output
+            }
+        }
+    })
 }
 
 #[inline(always)]
@@ -727,7 +803,15 @@ fn new_combin<F>(arg: F) -> Combinator
 where
     F: Fn(Iter, Iter) -> Iter + 'static,
 {
-    Box::new(arg)
+    Box::new(move |i1: Iter, i2: Iter| -> Iter {
+        let (i1, i2, cache) = match crate::runtime::cache::coalesce::check::<F>(i1, i2) {
+            Ok(cached) => return cached,
+            Err(((i1, i2), cache)) => (i1, i2, cache),
+        };
+        let output = arg(i1, i2);
+        crate::runtime::cache::coalesce::insert::<F>(cache, output.clone());
+        output
+    })
 }
 
 #[inline(always)]
@@ -738,7 +822,7 @@ where
     Box::new(arg)
 }
 
-fn small_vec_builder(arg: Iter) -> SmallVec<[Element; 1]> {
+fn small_vec_builder(arg: Iter) -> SmallVec<[Element; 4]> {
     let mut v = SmallVec::new();
     v.extend(arg);
     v
