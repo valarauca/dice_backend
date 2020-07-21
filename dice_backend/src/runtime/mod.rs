@@ -3,7 +3,7 @@ pub use self::consts::{Dice3, Dice3Iter, Dice6, Dice6Iter};
 mod datum;
 pub use self::datum::{BoolVec, Datum, IntVec};
 mod element;
-pub use self::element::{Element, Rational};
+pub use self::element::Element;
 mod lambda;
 pub use self::lambda::{
     coalesce, const_bool, const_int, count, d3, d6, filter, from_op, join, len, max, min, sum,
@@ -13,7 +13,7 @@ mod report;
 pub use self::report::Report;
 mod coll;
 pub use self::coll::build_report;
-mod math;
+//mod math;
 
 /// create report directly converts source code into a report.
 pub fn create_report(source: &str) -> Result<Report, String> {
@@ -37,17 +37,17 @@ analyze (sum(dice) - min(dice));
 "#;
     let report = create_report(dut).unwrap();
     let output = report.equal(&[
-        (Datum::from(2), Rational::new(1, 216)),
-        (Datum::from(3), Rational::new(3, 216)),
-        (Datum::from(4), Rational::new(7, 216)),
-        (Datum::from(5), Rational::new(12, 216)),
-        (Datum::from(6), Rational::new(18, 216)),
-        (Datum::from(7), Rational::new(27, 216)),
-        (Datum::from(8), Rational::new(34, 216)),
-        (Datum::from(9), Rational::new(36, 216)),
-        (Datum::from(10), Rational::new(34, 216)),
-        (Datum::from(11), Rational::new(27, 216)),
-        (Datum::from(12), Rational::new(16, 216)),
+        (Datum::from(2), 1.0 / 216.0),
+        (Datum::from(3), 3.0 / 216.0),
+        (Datum::from(4), 7.0 / 216.0),
+        (Datum::from(5), 12.0 / 216.0),
+        (Datum::from(6), 18.0 / 216.0),
+        (Datum::from(7), 27.0 / 216.0),
+        (Datum::from(8), 34.0 / 216.0),
+        (Datum::from(9), 36.0 / 216.0),
+        (Datum::from(10), 34.0 / 216.0),
+        (Datum::from(11), 27.0 / 216.0),
+        (Datum::from(12), 16.0 / 216.0),
     ]);
 }
 
@@ -60,17 +60,17 @@ analyze (sum(dice) - max(dice));
 
     let report = create_report(dut).unwrap();
     let output = report.equal(&[
-        (Datum::from(2), Rational::new(16, 216)),
-        (Datum::from(3), Rational::new(27, 216)),
-        (Datum::from(4), Rational::new(34, 216)),
-        (Datum::from(5), Rational::new(36, 216)),
-        (Datum::from(6), Rational::new(34, 216)),
-        (Datum::from(7), Rational::new(27, 216)),
-        (Datum::from(8), Rational::new(16, 216)),
-        (Datum::from(9), Rational::new(12, 216)),
-        (Datum::from(10), Rational::new(7, 216)),
-        (Datum::from(11), Rational::new(3, 216)),
-        (Datum::from(12), Rational::new(1, 216)),
+        (Datum::from(2), 16.0 / 216.0),
+        (Datum::from(3), 27.0 / 216.0),
+        (Datum::from(4), 34.0 / 216.0),
+        (Datum::from(5), 36.0 / 216.0),
+        (Datum::from(6), 34.0 / 216.0),
+        (Datum::from(7), 27.0 / 216.0),
+        (Datum::from(8), 16.0 / 216.0),
+        (Datum::from(9), 12.0 / 216.0),
+        (Datum::from(10), 7.0 / 216.0),
+        (Datum::from(11), 3.0 / 216.0),
+        (Datum::from(12), 1.0 / 216.0),
     ]);
 }
 
@@ -97,12 +97,12 @@ fn test_1d6() {
 
     // check if our report is correct
     let output = report.equal(&[
-        (Datum::from(1), Rational::new(1, 6)),
-        (Datum::from(2), Rational::new(1, 6)),
-        (Datum::from(3), Rational::new(1, 6)),
-        (Datum::from(4), Rational::new(1, 6)),
-        (Datum::from(5), Rational::new(1, 6)),
-        (Datum::from(6), Rational::new(1, 6)),
+        (Datum::from(1), 1.0 / 6.0),
+        (Datum::from(2), 1.0 / 6.0),
+        (Datum::from(3), 1.0 / 6.0),
+        (Datum::from(4), 1.0 / 6.0),
+        (Datum::from(5), 1.0 / 6.0),
+        (Datum::from(6), 1.0 / 6.0),
     ]);
     match output {
         Ok(()) => {}
@@ -133,17 +133,17 @@ fn test_2d6() {
 
     // check if our report is correct
     let output = report.equal(&[
-        (Datum::from(2), Rational::new(1, 36)),
-        (Datum::from(3), Rational::new(2, 36)),
-        (Datum::from(4), Rational::new(3, 36)),
-        (Datum::from(5), Rational::new(4, 36)),
-        (Datum::from(6), Rational::new(5, 36)),
-        (Datum::from(7), Rational::new(6, 36)),
-        (Datum::from(8), Rational::new(5, 36)),
-        (Datum::from(9), Rational::new(4, 36)),
-        (Datum::from(10), Rational::new(3, 36)),
-        (Datum::from(11), Rational::new(2, 36)),
-        (Datum::from(12), Rational::new(1, 36)),
+        (Datum::from(2), 1.0 / 36.0),
+        (Datum::from(3), 2.0 / 36.0),
+        (Datum::from(4), 3.0 / 36.0),
+        (Datum::from(5), 4.0 / 36.0),
+        (Datum::from(6), 5.0 / 36.0),
+        (Datum::from(7), 6.0 / 36.0),
+        (Datum::from(8), 5.0 / 36.0),
+        (Datum::from(9), 4.0 / 36.0),
+        (Datum::from(10), 3.0 / 36.0),
+        (Datum::from(11), 2.0 / 36.0),
+        (Datum::from(12), 1.0 / 36.0),
     ]);
     match output {
         Ok(()) => {}
@@ -202,17 +202,17 @@ fn test_2d6_join() {
 
     // check if our report is correct
     let output = report.equal(&[
-        (Datum::from(2), Rational::new(1, 36)),
-        (Datum::from(3), Rational::new(2, 36)),
-        (Datum::from(4), Rational::new(3, 36)),
-        (Datum::from(5), Rational::new(4, 36)),
-        (Datum::from(6), Rational::new(5, 36)),
-        (Datum::from(7), Rational::new(6, 36)),
-        (Datum::from(8), Rational::new(5, 36)),
-        (Datum::from(9), Rational::new(4, 36)),
-        (Datum::from(10), Rational::new(3, 36)),
-        (Datum::from(11), Rational::new(2, 36)),
-        (Datum::from(12), Rational::new(1, 36)),
+        (Datum::from(2), 1.0 / 36.0),
+        (Datum::from(3), 2.0 / 36.0),
+        (Datum::from(4), 3.0 / 36.0),
+        (Datum::from(5), 4.0 / 36.0),
+        (Datum::from(6), 5.0 / 36.0),
+        (Datum::from(7), 6.0 / 36.0),
+        (Datum::from(8), 5.0 / 36.0),
+        (Datum::from(9), 4.0 / 36.0),
+        (Datum::from(10), 3.0 / 36.0),
+        (Datum::from(11), 2.0 / 36.0),
+        (Datum::from(12), 1.0 / 36.0),
     ]);
     match output {
         Ok(()) => {}

@@ -13,7 +13,6 @@ extern crate lazy_static;
 extern crate clap;
 extern crate itertools;
 extern crate lalrpop_util;
-extern crate num_rational;
 extern crate rand;
 extern crate regex;
 extern crate seahash;

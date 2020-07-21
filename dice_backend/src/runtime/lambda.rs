@@ -7,7 +7,7 @@ use super::super::itertools::Itertools;
 use super::super::smallvec::SmallVec;
 
 use super::super::seahasher::DefaultSeaHasher;
-use super::{BoolVec, Datum, Dice3, Dice6, Element, IntVec, Rational};
+use super::{BoolVec, Datum, Dice3, Dice6, Element, IntVec};
 
 /// Iter is an iterator of elements
 pub type Iter = Box<dyn Iterator<Item = Element>>;
@@ -420,7 +420,7 @@ pub fn from_op(arg: &Op) -> Combinator {
 /// build a constant boolean
 pub fn const_bool(b: bool) -> Init {
     new_init(move || -> Iter {
-        let v: Option<Element> = Some(Element::new(b, Rational::from_integer(1)));
+        let v: Option<Element> = Some(Element::new(b, 1.0));
         new_iter(v)
     })
 }
@@ -428,7 +428,7 @@ pub fn const_bool(b: bool) -> Init {
 /// build a constant int generator
 pub fn const_int(x: i8) -> Init {
     new_init(move || -> Iter {
-        let v: Option<Element> = Some(Element::new(x, Rational::from_integer(1)));
+        let v: Option<Element> = Some(Element::new(x, 1.0));
         new_iter(v)
     })
 }
@@ -519,7 +519,7 @@ pub fn sum() -> Chain {
 pub fn coalesce() -> Coalesce {
     new_coalesce(move |iter: Iter| -> Init {
         // build a map and merge values
-        let mut map = HashMap::<Datum, Rational, DefaultSeaHasher>::with_capacity_and_hasher(
+        let mut map = HashMap::<Datum, f64, DefaultSeaHasher>::with_capacity_and_hasher(
             100,
             DefaultSeaHasher::default(),
         );
@@ -597,17 +597,16 @@ pub fn d6() -> Chain {
  */
 
 /// generate a specific number of `dice3` rolles
-fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
+fn roll_dice6(num: usize, base_prob: f64) -> Iter {
     // lambda for the base case (rolling 1 dice)
-    let lambda =
-        move |x: i8| -> Element { Element::new([x], base_prob / Rational::from_integer(6)) };
+    let lambda = move |x: i8| -> Element { Element::new([x], base_prob / 6.0) };
 
     // lambda for other cases (rolling >1 dice)
     let joiner = move |tup: (Element, i8)| -> Element {
         let (e, x) = (tup.0, tup.1);
         let (mut datum, prob) = e.split();
         datum.append_int(x);
-        Element::new(datum, prob / Rational::from_integer(6))
+        Element::new(datum, prob / 6.0)
     };
 
     match num {
@@ -632,17 +631,16 @@ fn roll_dice6(num: usize, base_prob: Rational) -> Iter {
     }
 }
 /// generate a specific number of `dice3` rolles
-fn roll_dice3(num: usize, base_prob: Rational) -> Iter {
+fn roll_dice3(num: usize, base_prob: f64) -> Iter {
     // lambda for the base case (rolling 1 dice)
-    let lambda =
-        move |x: i8| -> Element { Element::new([x], base_prob / Rational::from_integer(3)) };
+    let lambda = move |x: i8| -> Element { Element::new([x], base_prob / 3.0) };
 
     // lambda for other cases (rolling >1 dice)
     let joiner = move |tup: (Element, i8)| -> Element {
         let (e, x) = (tup.0, tup.1);
         let (mut datum, prob) = e.split();
         datum.append_int(x);
-        Element::new(datum, prob / Rational::from_integer(3))
+        Element::new(datum, prob / 3.0)
     };
 
     match num {

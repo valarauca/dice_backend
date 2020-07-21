@@ -1,24 +1,16 @@
 use std::mem::replace;
 
-use super::super::num_rational::Ratio;
-
 use super::Datum;
-
-pub type Rational = Ratio<usize>;
 
 /// Element is a single value
 #[derive(Clone, Debug)]
 pub struct Element {
     datum: Datum,
-    prob: Rational,
-}
-#[test]
-fn assert_element_size() {
-    assert_eq!(::std::mem::size_of::<Element>(), 64);
+    prob: f64,
 }
 impl Element {
     /// build a new element from a datum
-    pub fn new<T>(datum: T, prob: Rational) -> Element
+    pub fn new<T>(datum: T, prob: f64) -> Element
     where
         Datum: From<T>,
     {
@@ -29,7 +21,7 @@ impl Element {
     }
 
     /// split into components
-    pub fn split(self) -> (Datum, Rational) {
+    pub fn split(self) -> (Datum, f64) {
         (self.datum, self.prob)
     }
 

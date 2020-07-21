@@ -2,15 +2,15 @@ use std::collections::{BTreeMap, HashMap};
 use std::iter::{FromIterator, IntoIterator};
 
 use super::super::seahasher::DefaultSeaHasher;
-use super::{Datum, Element, Rational};
+use super::{Datum, Element};
 
 #[derive(Clone)]
 pub struct Report {
-    data: HashMap<Datum, Rational, DefaultSeaHasher>,
+    data: HashMap<Datum, f64, DefaultSeaHasher>,
 }
 impl Report {
     /// equal is used for testing, so comparisons between the input & output can be easily done
-    pub fn equal(&self, dut: &[(Datum, Rational)]) -> Result<(), String> {
+    pub fn equal(&self, dut: &[(Datum, f64)]) -> Result<(), String> {
         for tuple in dut {
             match self.data.get(&tuple.0) {
                 Option::None => {
@@ -20,7 +20,7 @@ impl Report {
                     ))
                 }
                 Option::Some(rational) => {
-                    if !rational.eq(&tuple.1) {
+                    if !approximately_equal(rational, &tuple.1) {
                         return Err(format!(
                             "for datum:'{:?}' expected value:'{:?}' found:'{:?}'",
                             &tuple.0, &tuple.1, rational
@@ -41,11 +41,8 @@ impl Report {
 
     /// converts the report
     fn into_raw_report(&self) -> Vec<(Datum, f64)> {
-        let make_floats = |(datum, rational): (&Datum, &Rational)| -> (Datum, f64) {
-            let num = rational.numer().clone() as f64;
-            let denom = rational.denom().clone() as f64;
-            (datum.clone(), num / denom)
-        };
+        let make_floats =
+            |(datum, rational): (&Datum, &f64)| -> (Datum, f64) { (datum.clone(), *rational) };
         let mut vec: Vec<(Datum, f64)> = self.data.iter().map(make_floats).collect();
         vec.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
         vec
@@ -84,7 +81,7 @@ impl FromIterator<Element> for Report {
                 }
             }
         };
-        let mut map = HashMap::<Datum, Rational, DefaultSeaHasher>::with_capacity_and_hasher(
+        let mut map = HashMap::<Datum, f64, DefaultSeaHasher>::with_capacity_and_hasher(
             capacity,
             DefaultSeaHasher::default(),
         );
@@ -105,5 +102,20 @@ impl FromIterator<Element> for Report {
         }
 
         Report { data: map }
+    }
+}
+
+fn approximately_equal(a: &f64, b: &f64) -> bool {
+    if *a == *b {
+        true
+    } else {
+        let good_enough = 0.00000000001f64;
+        let a_over = *a + good_enough;
+        let a_under = *a - good_enough;
+        if (a_over > *b) & (a_under < *b) {
+            true
+        } else {
+            false
+        }
     }
 }
