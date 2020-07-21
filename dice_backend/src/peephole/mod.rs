@@ -24,14 +24,21 @@ mod test {
 
     #[test]
     fn test_join_roll() {
+        /*
+         * The output is the same as `roll_d6(5)`
+         *
+         */
         let dut = r#"analyze join(roll_d6(2), roll_d6(3));"#;
         let mut coll = build_coll(dut);
         brute_force_optimize(&mut coll);
         match coll.get_expr(coll.get_return()) {
             Option::Some(OrderedExpression::StdLib(StdLibraryFunc::D6(ref args))) => {
-                assert!(matches!( coll.get_expr(args.get_sources()[0].0), Option::Some(OrderedExpression::Constant(ConstantValue::Int(5,_)))));
+                assert!(matches!(
+                    coll.get_expr(args.get_sources()[0].0),
+                    Option::Some(OrderedExpression::Constant(ConstantValue::Int(5, _)))
+                ));
             }
-            what_ever => panic!("{:?}", what_ever)
+            what_ever => panic!("{:?}", what_ever),
         };
     }
 

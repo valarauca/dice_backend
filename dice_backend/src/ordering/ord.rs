@@ -52,7 +52,7 @@ pub trait OrdTrait: AsRef<OrdType> + AsMut<OrdType> + PartialEq<TypeData> {
 
     fn add_sink(&mut self, id: u64, kind: TypeData) {
         // this must be true
-        debug_assert_eq!(self.get_own_type(), kind);
+        //debug_assert_eq!(self.get_own_type(), kind);
 
         if !self.as_ref().sink_exists(id, kind) {
             self.as_mut().sinks.push((id, kind));
@@ -61,7 +61,9 @@ pub trait OrdTrait: AsRef<OrdType> + AsMut<OrdType> + PartialEq<TypeData> {
 
     fn cas_source(&mut self, old_id: u64, old_kind: TypeData, new_id: u64, new_kind: TypeData) {
         match search_for_index(self.get_sources(), old_id, old_kind) {
-            Option::None => _unreachable_panic!("item with id:{:?} kind:{:?}", old_id, old_kind),
+            Option::None => {
+                //_unreachable_panic!("item with id:{:?} kind:{:?}", old_id, old_kind);
+            }
             Option::Some(index) => {
                 self.as_mut().sources[index] = (new_id, new_kind);
             }
@@ -70,7 +72,9 @@ pub trait OrdTrait: AsRef<OrdType> + AsMut<OrdType> + PartialEq<TypeData> {
 
     fn remove_sink(&mut self, id: u64, kind: TypeData) {
         match search_for_index(self.get_sinks(), id, kind) {
-            Option::None => _unreachable_panic!("item with id:{:?} kind:{:?}", id, kind),
+            Option::None => {
+                //_unreachable_panic!("item with id:{:?} kind:{:?}", id, kind);
+            }
             Option::Some(index) => {
                 self.as_mut().sinks.remove(index);
             }
