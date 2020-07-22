@@ -562,12 +562,7 @@ pub fn join() -> Combinator {
             };
             Element::new(joined, prob1 * prob2)
         };
-        let vec_builder = |iter: Iter| -> SmallVec<[Element; 1]> {
-            let mut v = SmallVec::new();
-            v.extend(iter);
-            v
-        };
-        new_iter(i1.cartesian_product(vec_builder(i2)).map(lambda))
+        new_iter(i1.cartesian_product(small_vec_builder(i2)).map(lambda))
     })
 }
 
@@ -620,6 +615,61 @@ fn roll_dice6(num: usize, base_prob: f64) -> Iter {
             // so it can iterate correctly
             new_iter(Dice6::new().into_iter().map(lambda))
         }
+        2 => new_iter(
+            Dice6::new()
+                .into_iter()
+                .map(lambda)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner),
+        ),
+        3 => new_iter(
+            Dice6::new()
+                .into_iter()
+                .map(lambda)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner),
+        ),
+        4 => new_iter(
+            Dice6::new()
+                .into_iter()
+                .map(lambda)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner),
+        ),
+        5 => new_iter(
+            Dice6::new()
+                .into_iter()
+                .map(lambda)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner),
+        ),
+        6 => new_iter(
+            Dice6::new()
+                .into_iter()
+                .map(lambda)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner)
+                .cartesian_product(Dice6::new().into_iter())
+                .map(joiner),
+        ),
         _ => {
             // do recursive stuff for values > 2
             new_iter(
@@ -737,7 +787,7 @@ where
 }
 
 fn small_vec_builder(arg: Iter) -> SmallVec<[Element; 1]> {
-    let mut v = SmallVec::new();
+    let mut v = SmallVec::<[Element; 1]>::new();
     v.extend(arg);
     v
 }

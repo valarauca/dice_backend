@@ -7,6 +7,12 @@ use super::Datum;
 pub struct Element {
     datum: Datum,
     prob: f64,
+    #[allow(dead_code)]
+    _pad: u64,
+}
+#[test]
+fn assert_element_size() {
+    assert_eq!(::std::mem::size_of::<Element>(), 64);
 }
 impl Element {
     /// build a new element from a datum
@@ -16,6 +22,7 @@ impl Element {
     {
         Element {
             datum: Datum::from(datum),
+            _pad: 0,
             prob,
         }
     }

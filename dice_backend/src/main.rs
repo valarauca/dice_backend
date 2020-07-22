@@ -12,6 +12,7 @@ extern crate smallvec;
 extern crate lazy_static;
 extern crate clap;
 extern crate itertools;
+extern crate jemallocator;
 extern crate lalrpop_util;
 extern crate rand;
 extern crate regex;
@@ -35,6 +36,9 @@ mod syntaxhelper;
 mod validator;
 mod value;
 use self::run::run_path;
+
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 fn main() {
     let matches = App::new("foxhole")
