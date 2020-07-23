@@ -18,6 +18,7 @@ pub enum OrderedExpression {
     StdLib(StdLibraryFunc),
     Constant(ConstantValue),
     Op(Op),
+    Spec(Spec),
 }
 impl OrderedExpression {
     /// converts an inlined expression into an ordered expression
@@ -891,6 +892,7 @@ impl AsRef<OrdType> for OrderedExpression {
             &OrderedExpression::StdLib(ref s) => s.as_ref(),
             &OrderedExpression::Constant(ref c) => c.as_ref(),
             &OrderedExpression::Op(ref o) => o.as_ref(),
+            &OrderedExpression::Spec(ref s) => s.as_ref(),
         }
     }
 }
@@ -901,6 +903,7 @@ impl AsMut<OrdType> for OrderedExpression {
             &mut OrderedExpression::StdLib(ref mut s) => s.as_mut(),
             &mut OrderedExpression::Constant(ref mut c) => c.as_mut(),
             &mut OrderedExpression::Op(ref mut o) => o.as_mut(),
+            &mut OrderedExpression::Spec(ref mut s) => s.as_mut(),
         }
     }
 }
@@ -990,6 +993,39 @@ impl PartialEq<TypeData> for StdLibraryFunc {
     }
 }
 impl OrdTrait for StdLibraryFunc {}
+
+/// Specialization handles unique cases where we can remove
+/// iteration from the output
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Spec {
+    SumMultiD6(OrdType),
+    SumMultiD3(OrdType),
+}
+impl AsMut<OrdType> for Spec {
+    #[inline(always)]
+    fn as_mut<'a>(&'a mut self) -> &'a mut OrdType {
+        match self {
+            &mut Spec::SumMultiD6(ref mut x)
+            | &mut Spec::SumMultiD3(ref mut x) => x.as_mut(),
+        }
+    }
+}
+impl AsRef<OrdType> for Spec {
+    #[inline(always)]
+    fn as_ref<'a>(&'a self) -> &'a OrdType {
+        match self {
+            &Spec::SumMultiD6(ref x)
+            | &Spec::SumMultiD3(ref x) => x.as_ref(),
+        }
+    }
+}
+impl PartialEq<TypeData> for Spec {
+    #[inline(always)]
+    fn eq(&self, other: &TypeData) -> bool {
+        self.as_ref().eq(other)
+    }
+}
+impl OrdTrait for Spec {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Op {
