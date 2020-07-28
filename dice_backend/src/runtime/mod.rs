@@ -1,3 +1,5 @@
+/*
+
 mod consts;
 pub use self::consts::{Dice3, Dice3Iter, Dice6, Dice6Iter};
 mod datum;
@@ -29,6 +31,7 @@ pub fn create_report(source: &str) -> Result<Report, String> {
     Ok(build_report(&inlinecoll))
 }
 
+/*
 #[test]
 fn test_removing_min_dice_roll() {
     let dut = r#"
@@ -219,3 +222,6 @@ fn test_2d6_join() {
         Err(e) => panic!("{:?}", e),
     };
 }
+*/
+
+*/

@@ -1,4 +1,4 @@
-use super::runtime::create_report;
+//use super::runtime::create_report;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
 
@@ -13,8 +13,11 @@ pub fn run_path(path: &str) -> Result<String, String> {
         Err(e) => return Err(format!("failed to read file={:?} with error={:?}", path, e)),
     };
 
+    /*
     match create_report(&file_data) {
         Ok(report) => Ok(report.serialize_report(None)),
         Err(e) => Err(e),
     }
+    */
+    Err(format!("feature current disabled, internal work required"))
 }

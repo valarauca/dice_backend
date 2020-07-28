@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::replace;
 
-use super::super::inliner::{BoolArg, BoolOrInt, IntArg, Op};
+use super::super::parser_output::TypeData;
+use super::super::ordering::{Op,OrdTrait};
 use super::super::itertools::Itertools;
 use super::super::smallvec::SmallVec;
 
@@ -113,26 +114,58 @@ impl LambdaKind {
     }
 }
 
+
 pub fn from_op(arg: &Op) -> Combinator {
-    #[inline(always)]
-    fn int_scalar<T, F>(lambda: F) -> impl 'static + Fn((Element, Element)) -> Element
-    where
-        F: Fn(i8, i8) -> T + 'static,
-        Datum: From<T>,
-    {
-        move |(i1, i2): (Element, Element)| -> Element {
-            let (data_1, prob_1) = i1.split();
-            let (data_2, prob_2) = i2.split();
-            Element::new(lambda(data_1.get_int(), data_2.get_int()), prob_1 * prob_2)
-        }
+
+    /// determines our ordering for the cartesian product
+    #[derive(Copy,Clone,PartialEq,Eq,PartialOrd,Ord,Hash,Debug)]
+    enum CartesianOrder {
+        One,
+        Two,
     }
 
     #[inline(always)]
-    fn int_coll_scalar<F>(lambda: F) -> impl Fn((Element, Element)) -> Element
+    fn build_comb<F,C>(cart: C, lambda: F) -> Combinator
     where
-        F: Fn(&mut i8, i8),
+        F: 'static + Fn((Element,Element)) -> Element,
+        C: 'static + Into<Option<CartesianOrder>>,
     {
-        move |(collection, item): (Element, Element)| -> Element {
+        new_combin(move |i1: Iter, i2: Iter| -> Iter {
+                match cart.into() {
+                    Option::None |
+                     Option::Some(CartesianOrder::One) => {
+                        new_iter(i1.cartesian_product(small_vec_builder(i2)).map(lambda))
+                    }
+                    Option::Some(CartesianOrder::Two) => {
+                        new_iter(i2.cartesian_product(small_vec_builder(i1)).map(lambda))
+                    }
+                }
+        })
+    }
+
+    #[inline(always)]
+    fn int_scalar<T,F,C>(lambda: F, cart: C) -> Combinator
+    where
+        F: Fn(i8, i8) -> T + 'static,
+        Datum: From<T>,
+        T: 'static,
+        C: 'static + Into<Option<CartesianOrder>>,
+    {
+        build_comb(cart, move |(i1, i2): (Element, Element)| -> Element {
+            let (data_1, prob_1) = i1.split();
+            let (data_2, prob_2) = i2.split();
+            Element::new(lambda(data_1.get_int(), data_2.get_int()), prob_1 * prob_2)
+        })
+    }
+
+    /// handles integer & collections of integers
+    #[inline(always)]
+    fn int_coll_scalar<F,C>(lambda: F, cart: C) -> Combinator
+    where
+        F: Fn(&mut i8, i8) + 'static,
+        C: Into<Option<CartesianOrder>> + 'static,
+    {
+        build_comb(cart, move |(collection, item): (Element, Element)| -> Element {
             let (collection_data, collection_prob) = collection.split();
             let (scalar_data, scalar_prob) = item.split();
             let scalar_int = scalar_data.get_int();
@@ -141,16 +174,17 @@ pub fn from_op(arg: &Op) -> Combinator {
                 lambda(ptr, scalar_int);
             }
             Element::new(coll_vec, scalar_prob * collection_prob)
-        }
+        })
     }
 
     /// collection is always first arg, scalar is second
     #[inline(always)]
-    fn int_coll_bool<F>(lambda: F) -> impl Fn((Element, Element)) -> Element
+    fn int_coll_bool<F,C>(lambda: F, cart: C) -> Combinator
     where
-        F: Fn(i8, i8) -> bool,
+        F: Fn(i8, i8) -> bool + 'static,
+        C: Into<Option<CartesianOrder>> + 'static,
     {
-        move |(collection, item): (Element, Element)| -> Element {
+        build_comb(cart, move |(collection, item): (Element, Element)| -> Element {
             let (collection_data, collection_prob) = collection.split();
             let (scalar_data, scalar_prob) = item.split();
             let scalar_int = scalar_data.get_int();
@@ -162,15 +196,398 @@ pub fn from_op(arg: &Op) -> Combinator {
                     .collect::<BoolVec>(),
                 scalar_prob * collection_prob,
             )
-        }
+        })
     }
 
+    let sources = arg.get_sources();
+    debug_assert_eq!(sources.len(),2);
+    let left_kind = sources[0].1;
+    let right_kind = sources[1].1;
+    match (left_kind, right_kind) {
+        (TypeData::Int,TypeData::Int) => {
+            match arg {
+                &Op::Add(_) => {
+                    int_scalar(|a, b| a+b, None)
+                },
+                &Op::Sub(_) => {
+                    int_scalar(|a, b| a-b, None)
+                },
+                &Op::Mul(_) => {
+                    int_scalar(|a,b| a*b, None)
+                },
+                &Op::Div(_) => {
+                    int_scalar(|a,b| a/b, None)
+                },
+                &Op::Equal(_) => {
+                    int_scalar(|a,b| a == b, None)
+                },
+                &Op::NotEqual(_) => {
+                    int_scalar(|a,b| a != b, None)
+                },
+                &Op::GreaterThan(_) => {
+                    int_scalar(|a,b| a > b, None)
+                },
+                &Op::GreaterThanEqual(_) => {
+                    int_scalar(|a,b| a > b, None)
+                },
+                &Op::LessThan(_) => {
+                    int_scalar(|a,b| a < b, None)
+                },
+                &Op::LessThanEqual(_) => {
+                    int_scalar(|a,b| a <= b, None)
+                },
+                &Op::Or(_) => {
+                    int_scalar(|a,b| a|b, None)
+                },
+                &Op::And(_) => {
+                    int_scalar(|a,b| a&b, None)
+                },
+            }
+        }
+        (TypeData::Int,TypeData::Bool) => {
+            panic!("this is a type error")
+        }
+        (TypeData::Int,TypeData::CollectionOfInt) => {
+            match arg {
+                &Op::Add(_) => {
+                    int_coll_scalar(|scal,coll| *scal += coll, CartesianOrder::Two)
+                },
+                &Op::Sub(_) => {
+                    int_coll_scalar(|scal,coll| *scal -= coll, CartesianOrder::Two)
+                },
+                &Op::Mul(_) => {
+                    int_coll_scalar(|scal,coll| *scal *= coll, CartesianOrder::Two)
+                },
+                &Op::Div(_) => {
+                    int_coll_scalar(|scal,coll| *scal /= coll, CartesianOrder::Two)
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::Int,TypeData::CollectionOfBool) => {
+            panic!("this is a type error")
+        }
+        (TypeData::Bool,TypeData::Int) => {
+            panic!("this is a type error")
+        }
+        (TypeData::Bool,TypeData::Bool) => {
+            match arg {
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+                x => {
+                    panic!("{:?} is not a real operation on (Bool,Bool)", x);
+                }
+            }
+        }
+        (TypeData::Bool,TypeData::CollectionOfInt) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::Bool,TypeData::CollectionOfBool) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfInt,TypeData::Int) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfInt,TypeData::Bool) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfInt,TypeData::CollectionOfInt) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfInt,TypeData::CollectionOfBool) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfBool,TypeData::Int) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfBool,TypeData::Bool) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfBool,TypeData::CollectionOfInt) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        (TypeData::CollectionOfBool,TypeData::CollectionOfBool) => {
+            match arg {
+                &Op::Add(_) => {
+                },
+                &Op::Sub(_) => {
+                },
+                &Op::Mul(_) => {
+                },
+                &Op::Div(_) => {
+                },
+                &Op::Equal(_) => {
+                },
+                &Op::NotEqual(_) => {
+                },
+                &Op::GreaterThan(_) => {
+                },
+                &Op::GreaterThanEqual(_) => {
+                },
+                &Op::LessThan(_) => {
+                },
+                &Op::LessThanEqual(_) => {
+                },
+                &Op::Or(_) => {
+                },
+                &Op::And(_) => {
+                },
+            };
+        }
+        */
+            (a,b) => {
+            panic!("nothing implemented for ({:?},{:?})", a,b)
+        }
+    }
+    /*
     match arg {
         Op::Add(IntArg::Int_Int(left, right)) => new_combin(move |i1: Iter, i2: Iter| -> Iter {
-            new_iter(
-                i1.cartesian_product(small_vec_builder(i2))
-                    .map(int_scalar(|a, b| a + b)),
-            )
         }),
         Op::Add(IntArg::Int_CollectionOfInt(left, right)) => {
             new_combin(move |i1: Iter, i2: Iter| -> Iter {
@@ -415,6 +832,7 @@ pub fn from_op(arg: &Op) -> Combinator {
         Op::Or(BoolArg::CollectionOfBool_Bool(left, right)) => unreachable!(),
         Op::Or(BoolArg::Bool_CollectionOfBool(left, right)) => unreachable!(),
     }
+*/
 }
 
 /// build a constant boolean

@@ -1005,8 +1005,7 @@ impl AsMut<OrdType> for Spec {
     #[inline(always)]
     fn as_mut<'a>(&'a mut self) -> &'a mut OrdType {
         match self {
-            &mut Spec::SumMultiD6(ref mut x)
-            | &mut Spec::SumMultiD3(ref mut x) => x.as_mut(),
+            &mut Spec::SumMultiD6(ref mut x) | &mut Spec::SumMultiD3(ref mut x) => x.as_mut(),
         }
     }
 }
@@ -1014,8 +1013,7 @@ impl AsRef<OrdType> for Spec {
     #[inline(always)]
     fn as_ref<'a>(&'a self) -> &'a OrdType {
         match self {
-            &Spec::SumMultiD6(ref x)
-            | &Spec::SumMultiD3(ref x) => x.as_ref(),
+            &Spec::SumMultiD6(ref x) | &Spec::SumMultiD3(ref x) => x.as_ref(),
         }
     }
 }
